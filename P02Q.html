@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P02Q</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+</head>
+<body class="bg-light">
+  <div class="container py-5" style="max-width: 800px;">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h1 class="h4 mb-0">作答頁面</h1>
+          <div class="text-muted small">
+            <span id="showUser"></span> ｜ <span id="showQCat"></span>
+          </div>
+        </div>
+
+        <div id="loadingText" class="mb-3">題目載入中...</div>
+
+        <form id="questionForm" style="display:none;">
+          <div class="mb-4">
+            <div class="fw-bold mb-2">題目</div>
+            <div id="questionText" class="fs-5"></div>
+          </div>
+
+          <div class="mb-4">
+            <div class="fw-bold mb-2">請選擇答案</div>
+            <div id="choicesArea"></div>
+          </div>
+
+          <button type="submit" class="btn btn-success">送出</button>
+          <a href="P01Main.html" class="btn btn-secondary ms-2">回首頁</a>
+        </form>
+
+        <div id="msg" class="mt-3 text-danger"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentQuestion = null;
+    let currentChoices = [];
+    let pageStartTime = Date.now();
+
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    async function loadQuestion() {
+      const userId = localStorage.getItem('P01_UserID');
+      const qcat = localStorage.getItem('P01_QCat');
+
+      if (!userId || !qcat) {
+        window.location.href = 'P01Main.html';
+        return;
+      }
+
+      document.getElementById('showUser').textContent = `使用者：${userId}`;
+      document.getElementById('showQCat').textContent = `類別：${qcat}`;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('TblP01Question')
+          .select('QID, QCat, Q, CA, WA1, WA2, WA3')
+          .eq('QCat', qcat);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          document.getElementById('loadingText').textContent = '此類別目前沒有題目。';
+          return;
+        }
+
+        currentQuestion = data[Math.floor(Math.random() * data.length)];
+
+        currentChoices = shuffle([
+          currentQuestion.CA,
+          currentQuestion.WA1,
+          currentQuestion.WA2,
+          currentQuestion.WA3
+        ]);
+
+        document.getElementById('questionText').textContent = currentQuestion.Q;
+
+        const choicesArea = document.getElementById('choicesArea');
+        choicesArea.innerHTML = '';
+
+        currentChoices.forEach((choice, index) => {
+          const div = document.createElement('div');
+          div.className = 'form-check mb-2';
+
+          div.innerHTML = `
+            <input class="form-check-input" type="radio" name="answer" id="choice${index}" value="${escapeHtml(choice)}">
+            <label class="form-check-label" for="choice${index}">${escapeHtml(choice)}</label>
+          `;
+          choicesArea.appendChild(div);
+        });
+
+        document.getElementById('loadingText').style.display = 'none';
+        document.getElementById('questionForm').style.display = 'block';
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loadingText').textContent = '載入題目失敗。';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById('questionForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const msg = document.getElementById('msg');
+      msg.textContent = '';
+
+      const selected = document.querySelector('input[name="answer"]:checked');
+      if (!selected) {
+        msg.textContent = '請先選擇一個答案。';
+        return;
+      }
+
+      const selectedValue = selected.value;
+      const isCorrect = selectedValue === currentQuestion.CA;
+      const responseTime = Math.round((Date.now() - pageStartTime) / 1000);
+
+      const userId = localStorage.getItem('P01_UserID');
+      const qcat = localStorage.getItem('P01_QCat');
+
+      try {
+        const { error } = await supabaseClient
+          .from('TblP01Attempt')
+          .insert([{
+            QID: currentQuestion.QID,
+            UserID: userId,
+            Selected: selectedValue,
+            IsCorrect: isCorrect,
+            QCat: qcat,
+            ResponseTime: responseTime
+          }]);
+
+        if (error) throw error;
+
+        localStorage.setItem('P01_LastResult', JSON.stringify({
+          Q: currentQuestion.Q,
+          Selected: selectedValue,
+          CA: currentQuestion.CA,
+          IsCorrect: isCorrect
+        }));
+
+        window.location.href = 'P03A.html';
+      } catch (err) {
+        console.error(err);
+        msg.textContent = '寫入作答紀錄失敗，請檢查 TblP01Attempt 的 INSERT policy。';
+      }
+    });
+
+    loadQuestion();
+  </script>
+</body>
+</html>
