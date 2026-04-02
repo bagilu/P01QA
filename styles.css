@@ -1,0 +1,94 @@
+body {
+  background: #f5f7fb;
+}
+
+.app-card {
+  border: 0;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.mode-card {
+  border: 2px solid #e9ecef;
+  border-radius: 18px;
+  padding: 1.25rem;
+  background: #fff;
+  height: 100%;
+}
+
+.mode-title {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.soft-label {
+  color: #6c757d;
+  font-size: 0.95rem;
+}
+
+.game-code {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.25rem;
+}
+
+.quiz-timer {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.question-box {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.25rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.answer-option {
+  border: 2px solid #dfe6ee;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.answer-option:hover {
+  border-color: #0d6efd;
+}
+
+.answer-option.selected {
+  border-color: #198754;
+  background: #eefaf3;
+}
+
+.answer-option.disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.stat-pill {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #eef2f7;
+  margin-right: 0.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.rank-table td,
+.rank-table th {
+  vertical-align: middle;
+}
+
+.small-muted {
+  color: #6c757d;
+  font-size: 0.92rem;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}

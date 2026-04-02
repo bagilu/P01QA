@@ -3,100 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P01Main</title>
+  <title>Kahoot 風格選擇題系統</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  <link href="styles.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-  <div class="container py-5" style="max-width: 700px;">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h3 mb-4">選擇題系統</h1>
-
-        <div class="mb-3">
-          <label for="userId" class="form-label">暱稱（UserID）</label>
-          <input type="text" id="userId" class="form-control" placeholder="請輸入暱稱">
+<body>
+  <div class="container py-5" style="max-width: 1100px;">
+    <div class="card app-card">
+      <div class="card-body p-4 p-md-5">
+        <div class="text-center mb-4">
+          <h1 class="mb-2">Kahoot 風格選擇題系統</h1>
+          <div class="soft-label">可以先自己玩，也可以建立 6 位數競賽代號，讓其他人加入同一場競賽。</div>
         </div>
 
-        <div class="mb-4">
-          <label for="qcatSelect" class="form-label">題目類別</label>
-          <select id="qcatSelect" class="form-select">
-            <option value="">載入中...</option>
-          </select>
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="mode-card h-100">
+              <div class="mode-title mb-2">自己玩／建立競賽</div>
+              <div class="soft-label mb-3">輸入暱稱與題目類別後開始。系統會自動產生一組 6 位數競賽代號，其他人可用這組代號加入。</div>
+
+              <div class="mb-3">
+                <label class="form-label">暱稱</label>
+                <input type="text" id="createUserId" class="form-control" placeholder="例如：Jimmy">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">題目類別</label>
+                <select id="createQCat" class="form-select">
+                  <option value="">載入中...</option>
+                </select>
+              </div>
+
+              <button id="createGameBtn" class="btn btn-primary w-100">開始自己玩</button>
+              <div id="createMsg" class="text-danger mt-3"></div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="mode-card h-100">
+              <div class="mode-title mb-2">加入競賽</div>
+              <div class="soft-label mb-3">若朋友已經開始遊戲，請輸入暱稱與 6 位數競賽代號加入。同一場競賽中的所有人會看到同一題。</div>
+
+              <div class="mb-3">
+                <label class="form-label">暱稱</label>
+                <input type="text" id="joinUserId" class="form-control" placeholder="例如：Amy">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">競賽代號</label>
+                <input type="text" id="joinCode" class="form-control" maxlength="6" placeholder="請輸入 6 位數字">
+              </div>
+
+              <button id="joinGameBtn" class="btn btn-success w-100">加入競賽</button>
+              <div id="joinMsg" class="text-danger mt-3"></div>
+            </div>
+          </div>
         </div>
-
-        <button id="startBtn" class="btn btn-primary">開始</button>
-
-        <div id="msg" class="mt-3 text-danger"></div>
       </div>
     </div>
   </div>
 
-  <script>
-    async function loadQCatOptions() {
-      const select = document.getElementById('qcatSelect');
-      const msg = document.getElementById('msg');
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('TblP01Question')
-          .select('QCat')
-          .order('QCat', { ascending: true });
-
-        if (error) throw error;
-
-        const uniqueCats = [...new Set(
-          (data || [])
-            .map(item => (item.QCat || '').trim())
-            .filter(v => v !== '')
-        )];
-
-        select.innerHTML = '';
-
-        if (uniqueCats.length === 0) {
-          select.innerHTML = '<option value="">目前沒有題目類別</option>';
-          return;
-        }
-
-        select.innerHTML = '<option value="">請選擇題目類別</option>';
-        uniqueCats.forEach(cat => {
-          const option = document.createElement('option');
-          option.value = cat;
-          option.textContent = cat;
-          select.appendChild(option);
-        });
-      } catch (err) {
-        console.error(err);
-        msg.textContent = '讀取題目類別失敗，請檢查 Supabase 設定或 RLS policy。';
-        select.innerHTML = '<option value="">讀取失敗</option>';
-      }
-    }
-
-    document.getElementById('startBtn').addEventListener('click', () => {
-      const userId = document.getElementById('userId').value.trim();
-      const qcat = document.getElementById('qcatSelect').value;
-      const msg = document.getElementById('msg');
-
-      msg.textContent = '';
-
-      if (!userId) {
-        msg.textContent = '請先輸入暱稱。';
-        return;
-      }
-
-      if (!qcat) {
-        msg.textContent = '請先選擇題目類別。';
-        return;
-      }
-
-      localStorage.setItem('P01_UserID', userId);
-      localStorage.setItem('P01_QCat', qcat);
-
-      window.location.href = 'P02Q.html';
-    });
-
-    loadQCatOptions();
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
