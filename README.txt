@@ -33,3 +33,6 @@
    - TblP01GamePlayer
 4. 目前採用前端輪詢（polling）方式同步，不需額外伺服器。
 5. GameCode 設計為 6 位數，並依資料庫 UNIQUE 限制避免永久重複。
+
+
+注意：zip 內的 config.js 仍是範例值，部署前必須改回您自己的 Supabase URL 與 anon key，否則會出現 Failed to fetch。

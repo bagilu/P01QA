@@ -1,7 +1,18 @@
 (function () {
   const config = window.APP_CONFIG || {};
-  if (!config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
-    console.error('config.js 尚未設定 SUPABASE_URL 或 SUPABASE_ANON_KEY');
+  const invalidConfig = !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY ||
+    String(config.SUPABASE_URL).includes('YOUR-PROJECT.supabase.co') ||
+    String(config.SUPABASE_ANON_KEY).includes('YOUR-ANON-KEY');
+
+  if (invalidConfig) {
+    console.error('config.js 尚未填入正確的 SUPABASE_URL 或 SUPABASE_ANON_KEY');
+    document.addEventListener('DOMContentLoaded', () => {
+      const createMsg = document.getElementById('createMsg');
+      const joinMsg = document.getElementById('joinMsg');
+      const msg = 'config.js 尚未填入正確的 Supabase 連線資料。請把您原本可用的 SUPABASE_URL 與 SUPABASE_ANON_KEY 貼回 config.js。';
+      if (createMsg) createMsg.textContent = msg;
+      if (joinMsg) joinMsg.textContent = msg;
+    });
     return;
   }
 
@@ -229,8 +240,8 @@
 
     const userId = $('joinUserId').value.trim();
     const raw = $('joinCode').value;
-const gameCode = (raw || '').replace(/\s/g,'');
-console.log('DEBUG gameCode=', gameCode, 'length=', gameCode.length);
+    const gameCode = (raw || '').replace(/\s/g, '');
+    console.log('DEBUG gameCode=', gameCode, 'length=', gameCode.length);
 
     if (!userId) {
       joinMsg.textContent = '請先輸入暱稱。';
