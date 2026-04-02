@@ -473,21 +473,24 @@
   }
 
   async function getCurrentQuestionStats(state) {
-    const [playerCountResult, attemptCountResult] = await Promise.all([
+    const [playersResult, attemptsResult] = await Promise.all([
       supabaseClient
         .from('TblP01GamePlayer')
-        .select('*', { count: 'exact', head: true })
+        .select('UserID')
         .eq('GameID', state.gameId),
       supabaseClient
         .from('TblP01Attempt')
-        .select('*', { count: 'exact', head: true })
+        .select('UserID, QID')
         .eq('GameID', state.gameId)
         .eq('QID', state.question.QID)
     ]);
 
+    const players = playersResult.error ? [] : (playersResult.data || []);
+    const attempts = attemptsResult.error ? [] : (attemptsResult.data || []);
+
     return {
-      playerCount: playerCountResult.error ? 0 : (playerCountResult.count ?? 0),
-      answeredCount: attemptCountResult.error ? 0 : (attemptCountResult.count ?? 0)
+      playerCount: players.length,
+      answeredCount: attempts.length
     };
   }
 
