@@ -27,8 +27,18 @@
     return document.getElementById(id);
   }
 
-  function nowIso() {
-    return new Date().toISOString();
+  function nowDbTimestamp() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  function parseDbTimestamp(value) {
+    if (!value) return null;
+    if (/([zZ]|[+-]\d{2}:\d{2})$/.test(value)) {
+      return new Date(value).getTime();
+    }
+    return new Date(String(value).replace(' ', 'T')).getTime();
   }
 
   function escapeHtml(text) {
@@ -180,8 +190,8 @@
           Status: 'playing',
           CurrentQuestionNo: 1,
           CurrentQID: firstQuestion.QID,
-          CreatedAt: nowIso(),
-          StartedAt: nowIso()
+          CreatedAt: nowDbTimestamp(),
+          StartedAt: nowDbTimestamp()
         }])
         .select();
 
@@ -443,7 +453,7 @@
 
   function updateTimerBySession(state) {
     if (!state.session || !state.session.StartedAt) return;
-    const start = new Date(state.session.StartedAt).getTime();
+    const start = parseDbTimestamp(state.session.StartedAt);
     const elapsed = Math.floor((Date.now() - start) / 1000);
     const remaining = Math.max(0, QUESTION_SECONDS - elapsed);
     updateTimer(remaining);
@@ -454,7 +464,7 @@
 
     if (!state.question || !state.session) return;
 
-    const start = new Date(state.session.StartedAt).getTime();
+    const start = parseDbTimestamp(state.session.StartedAt);
     const elapsed = Math.floor((Date.now() - start) / 1000);
     if (elapsed >= QUESTION_SECONDS) {
       $('actionMsg').textContent = '本題時間已到，無法再送出。';
@@ -534,7 +544,7 @@
   async function handleResultPhase(state) {
     if (!state.session || !state.question) return;
 
-    const start = new Date(state.session.StartedAt).getTime();
+    const start = parseDbTimestamp(state.session.StartedAt);
     const elapsed = Math.floor((Date.now() - start) / 1000);
 
     if (elapsed < QUESTION_SECONDS) {
@@ -654,7 +664,7 @@
         .update({
           CurrentQuestionNo: (state.session.CurrentQuestionNo || 0) + 1,
           CurrentQID: nextQuestion.QID,
-          StartedAt: nowIso(),
+          StartedAt: nowDbTimestamp(),
           Status: 'playing'
         })
         .eq('GameID', state.gameId);
@@ -676,7 +686,7 @@
         .from('TblP01GameSession')
         .update({
           Status: 'ended',
-          EndedAt: nowIso()
+          EndedAt: nowDbTimestamp()
         })
         .eq('GameID', state.gameId);
 
