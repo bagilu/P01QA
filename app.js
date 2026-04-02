@@ -228,13 +228,15 @@
     joinMsg.textContent = '';
 
     const userId = $('joinUserId').value.trim();
-    const gameCode = $('joinCode').value.trim();
+    const raw = $('joinCode').value;
+const gameCode = (raw || '').replace(/\s/g,'');
+console.log('DEBUG gameCode=', gameCode, 'length=', gameCode.length);
 
     if (!userId) {
       joinMsg.textContent = '請先輸入暱稱。';
       return;
     }
-    if (!/^\d{6}$/.test(gameCode)) {
+    if (!gameCode || gameCode.length !== 6) {
       joinMsg.textContent = '請輸入 6 位數競賽代號。';
       return;
     }
