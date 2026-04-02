@@ -591,12 +591,16 @@
     const stats = await getCurrentQuestionStats(state);
     state.currentAnswerStats = stats;
     const allAnswered = stats.playerCount > 0 && stats.answeredCount >= stats.playerCount;
+    const timeUp = remaining <= 0;
 
-    if (!allAnswered && remaining > 0) {
+    if (!allAnswered && !timeUp) {
       state.phase = 'question';
       updateTimer(remaining);
       if (state.submittedQids.has(state.question.QID)) {
         setAnswerOptionsDisabled(true);
+      }
+      if (state.isHost) {
+        $('nextBtn').disabled = true;
       }
       return;
     }
@@ -605,20 +609,22 @@
     updateTimer(0);
     setAnswerOptionsDisabled(true);
 
-    if (state.resultShownForQid !== state.question.QID) {
-      await renderDistribution(state, stats);
-      await renderRanking(state);
-      state.resultShownForQid = state.question.QID;
-      if (state.isHost) {
-        $('nextBtn').disabled = false;
-        $('actionMsg').textContent = allAnswered
-          ? '全體已作答完成。請由主持者決定是否進入下一題。'
-          : '本題時間結束。請由主持者決定是否進入下一題。';
-      } else {
-        $('actionMsg').textContent = allAnswered
-          ? '全體已作答完成，請等待主持者切換下一題。'
-          : '本題時間結束，請等待主持者切換下一題。';
-      }
+    if (state.isHost) {
+      $('nextBtn').disabled = false;
+    }
+
+    await renderDistribution(state, stats);
+    await renderRanking(state);
+    state.resultShownForQid = state.question.QID;
+
+    if (state.isHost) {
+      $('actionMsg').textContent = allAnswered
+        ? '全體已作答完成，主持者現在可以按「下一題」。'
+        : '本題時間結束，主持者現在可以按「下一題」。';
+    } else {
+      $('actionMsg').textContent = allAnswered
+        ? '全體已作答完成，請等待主持者切換下一題。'
+        : '本題時間結束，請等待主持者切換下一題。';
     }
   }
 
@@ -655,46 +661,73 @@
 
     if (error) throw error;
 
-    const ranked = (players || [])
-      .map(player => ({
-        UserID: player.UserID,
-        CorrectCount: player.CorrectCount || 0,
-        AnsweredCount: player.AnsweredCount || 0,
-        Score: (player.AnsweredCount || 0) > 0 ? (player.CorrectCount || 0) / player.AnsweredCount : 0
-      }))
+    const basePlayers = (players || []).map(player => ({
+      UserID: player.UserID,
+      CorrectCount: player.CorrectCount || 0,
+      AnsweredCount: player.AnsweredCount || 0,
+      Score: (player.AnsweredCount || 0) > 0 ? (player.CorrectCount || 0) / player.AnsweredCount : 0
+    }));
+
+    const rateRanked = [...basePlayers]
       .sort((a, b) => {
         if (b.Score !== a.Score) return b.Score - a.Score;
         if (b.CorrectCount !== a.CorrectCount) return b.CorrectCount - a.CorrectCount;
+        if (b.AnsweredCount !== a.AnsweredCount) return b.AnsweredCount - a.AnsweredCount;
         return a.UserID.localeCompare(b.UserID);
       })
       .slice(0, 3);
 
-    if (ranked.length === 0) {
+    const countRanked = [...basePlayers]
+      .sort((a, b) => {
+        if (b.CorrectCount !== a.CorrectCount) return b.CorrectCount - a.CorrectCount;
+        if (b.Score !== a.Score) return b.Score - a.Score;
+        if (b.AnsweredCount !== a.AnsweredCount) return b.AnsweredCount - a.AnsweredCount;
+        return a.UserID.localeCompare(b.UserID);
+      })
+      .slice(0, 3);
+
+    if (rateRanked.length === 0) {
       $('rankArea').innerHTML = '尚無資料。';
       return;
     }
 
-    const rows = ranked.map((player, idx) => `
+    const renderRows = (ranked, valueType) => ranked.map((player, idx) => `
       <tr>
         <td>${idx + 1}</td>
         <td>${escapeHtml(player.UserID)}</td>
-        <td>${(player.Score * 100).toFixed(1)}%</td>
+        <td>${valueType === 'rate' ? `${(player.Score * 100).toFixed(1)}%` : player.CorrectCount}</td>
         <td>${player.CorrectCount}/${player.AnsweredCount}</td>
       </tr>
     `).join('');
 
     $('rankArea').innerHTML = `
+      <div class="mb-3 fw-bold">排名一：答對率</div>
+      <div class="table-responsive mb-4">
+        <table class="table table-sm rank-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>名次</th>
+              <th>暱稱</th>
+              <th>答對率</th>
+              <th>答對/作答</th>
+            </tr>
+          </thead>
+          <tbody>${renderRows(rateRanked, 'rate')}</tbody>
+        </table>
+      </div>
+
+      <div class="mb-3 fw-bold">排名二：答對數</div>
       <div class="table-responsive">
         <table class="table table-sm rank-table align-middle mb-0">
           <thead>
             <tr>
               <th>名次</th>
               <th>暱稱</th>
-              <th>分數</th>
+              <th>答對數</th>
               <th>答對/作答</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${renderRows(countRanked, 'count')}</tbody>
         </table>
       </div>
     `;
