@@ -45,6 +45,9 @@ body {
 }
 
 .answer-option {
+  display: block;
+  width: 100%;
+  text-align: left;
   border: 2px solid #dfe6ee;
   border-radius: 16px;
   padding: 0.9rem 1rem;
@@ -54,7 +57,7 @@ body {
   background: #fff;
 }
 
-.answer-option:hover {
+.answer-option:hover:not(.disabled) {
   border-color: #0d6efd;
 }
 
@@ -91,4 +94,9 @@ body {
 .section-title {
   font-size: 1.05rem;
   font-weight: 700;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
 }

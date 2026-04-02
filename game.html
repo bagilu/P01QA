@@ -20,9 +20,12 @@
             </div>
           </div>
           <div class="text-lg-end">
+            <div class="header-actions mb-2">
+              <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
+            </div>
             <div class="stat-pill">目前加入人數：<span id="playerCount">0</span> 人</div>
             <div class="stat-pill">目前題號：<span id="questionNo">0</span></div>
-            <div class="quiz-timer mt-2" id="timer">15</div>
+            <div class="quiz-timer mt-2" id="timer">30</div>
           </div>
         </div>
 
@@ -34,14 +37,10 @@
             </div>
 
             <div class="question-box mb-4">
-              <div class="section-title mb-3">請選擇答案</div>
+              <div class="section-title mb-3">請直接點選答案</div>
               <div id="answerArea"></div>
-              <div class="d-flex gap-2 mt-3">
-                <button id="submitBtn" class="btn btn-success">送出答案</button>
-                <a href="index.html" class="btn btn-secondary">回首頁</a>
-              </div>
               <div id="actionMsg" class="text-danger mt-3"></div>
-              <div class="small-muted mt-2">每題倒數 15 秒。時間到後會自動鎖定作答，並顯示各答案選取人數與前三名。</div>
+              <div class="small-muted mt-2">每題預設倒數 30 秒。若全體成員都已作答，系統會立即結束本題並顯示統計；否則 30 秒到時結算。本題結束後，不會自動跳下一題，需由主持者按「下一題」。</div>
             </div>
 
             <div class="question-box" id="resultPanel">
@@ -64,7 +63,7 @@
                 <button id="nextBtn" class="btn btn-primary w-100 mb-2" disabled>下一題</button>
                 <button id="endBtn" class="btn btn-outline-danger w-100">結束競賽</button>
               </div>
-              <div id="nonHostTools" class="small-muted">若您不是主持者，系統會自動跟隨目前競賽進度。</div>
+              <div id="nonHostTools" class="small-muted">若您不是主持者，系統會自動跟隨目前競賽進度，並等待主持者切換下一題。</div>
             </div>
           </div>
         </div>

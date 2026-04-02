@@ -30,9 +30,8 @@
     seenQidsPrefix: 'P01_SEEN_QIDS_'
   };
 
-  const QUESTION_SECONDS = 15;
-  const RESULT_SECONDS = 5;
-  const POLL_MS = 2000;
+  const QUESTION_SECONDS = 30;
+  const POLL_MS = 1500;
 
   function $(id) {
     return document.getElementById(id);
@@ -86,18 +85,6 @@
       list.push(qid);
       localStorage.setItem(getSeenKey(gameId), JSON.stringify(list));
     }
-  }
-
-  function clearGameStorage() {
-    const gameId = localStorage.getItem(STORAGE_KEYS.gameId);
-    if (gameId) {
-      localStorage.removeItem(getSeenKey(gameId));
-    }
-    localStorage.removeItem(STORAGE_KEYS.gameId);
-    localStorage.removeItem(STORAGE_KEYS.gameCode);
-    localStorage.removeItem(STORAGE_KEYS.userId);
-    localStorage.removeItem(STORAGE_KEYS.qcat);
-    localStorage.removeItem(STORAGE_KEYS.host);
   }
 
   async function loadQcats() {
@@ -273,7 +260,9 @@
         .from('TblP01GamePlayer')
         .upsert([{
           GameID: session.GameID,
-          UserID: userId
+          UserID: userId,
+          CorrectCount: 0,
+          AnsweredCount: 0
         }], { onConflict: 'GameID,UserID' });
 
       if (playerError) throw playerError;
@@ -327,14 +316,14 @@
       session: null,
       question: null,
       answers: [],
-      timerInterval: null,
-      pollInterval: null,
       resultShownForQid: null,
       submittedQids: new Set(),
-      hostAdvancedForQid: null
+      phase: 'question',
+      isSubmitting: false,
+      currentAnswerStats: null,
+      pollInterval: null
     };
 
-    $('submitBtn').addEventListener('click', () => submitAnswer(state));
     $('nextBtn').addEventListener('click', () => manualNextQuestion(state));
     $('endBtn').addEventListener('click', () => endGame(state));
 
@@ -356,15 +345,17 @@
       }
 
       const session = sessions[0];
+      const previousQid = state.session?.CurrentQID;
       state.session = session;
 
       $('questionNo').textContent = session.CurrentQuestionNo || 0;
 
       if (session.Status === 'ended') {
-        $('actionMsg').textContent = '本場競賽已結束。';
-        $('submitBtn').disabled = true;
-        $('nextBtn').disabled = true;
+        state.phase = 'ended';
         updateTimer(0);
+        $('actionMsg').textContent = '主持者已結束本場競賽。';
+        $('nextBtn').disabled = true;
+        setAnswerOptionsDisabled(true);
         await refreshPlayerCount(state);
         await renderRanking(state);
         return;
@@ -372,12 +363,11 @@
 
       await refreshPlayerCount(state);
 
-      if (forceReloadQuestion || !state.question || state.question.QID !== session.CurrentQID) {
+      if (forceReloadQuestion || !state.question || state.question.QID !== session.CurrentQID || previousQid !== session.CurrentQID) {
         await loadCurrentQuestion(state, session.CurrentQID);
       }
 
-      updateTimerBySession(state);
-      await handleResultPhase(state);
+      await handleQuestionAndResultPhase(state);
     } catch (err) {
       console.error(err);
       $('actionMsg').textContent = '同步競賽失敗：' + (err.message || '未知錯誤');
@@ -392,7 +382,9 @@
 
     if (!error) {
       $('playerCount').textContent = count ?? 0;
+      return count ?? 0;
     }
+    return 0;
   }
 
   async function loadCurrentQuestion(state, qid) {
@@ -412,7 +404,9 @@
     state.question = questions[0];
     addSeenQid(state.gameId, qid);
     state.resultShownForQid = null;
-    state.hostAdvancedForQid = null;
+    state.phase = 'question';
+    state.currentAnswerStats = null;
+    state.isSubmitting = false;
 
     $('questionText').textContent = state.question.Q;
     $('actionMsg').textContent = '';
@@ -431,15 +425,12 @@
     answerArea.innerHTML = '';
 
     state.answers.forEach((answer, index) => {
-      const option = document.createElement('div');
+      const option = document.createElement('button');
+      option.type = 'button';
       option.className = 'answer-option';
       option.dataset.value = answer;
       option.innerHTML = `<strong>${String.fromCharCode(65 + index)}.</strong> ${escapeHtml(answer)}`;
-      option.addEventListener('click', () => {
-        if ($('submitBtn').disabled) return;
-        document.querySelectorAll('.answer-option').forEach(el => el.classList.remove('selected'));
-        option.classList.add('selected');
-      });
+      option.addEventListener('click', () => chooseAndSubmitAnswer(state, answer));
       answerArea.appendChild(option);
     });
 
@@ -451,12 +442,13 @@
       .eq('QID', state.question.QID)
       .limit(1);
 
-    $('submitBtn').disabled = !!(attempts && attempts.length > 0);
-    if (attempts && attempts.length > 0) {
-      $('actionMsg').textContent = '您已送出本題答案，請等待時間結束。';
-      document.querySelectorAll('.answer-option').forEach(el => el.classList.add('disabled'));
+    const alreadySubmitted = !!(attempts && attempts.length > 0);
+    if (alreadySubmitted) {
+      state.submittedQids.add(state.question.QID);
+      setAnswerOptionsDisabled(true);
+      $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
     } else {
-      document.querySelectorAll('.answer-option').forEach(el => el.classList.remove('disabled'));
+      setAnswerOptionsDisabled(false);
     }
   }
 
@@ -464,33 +456,63 @@
     $('timer').textContent = seconds;
   }
 
-  function updateTimerBySession(state) {
-    if (!state.session || !state.session.StartedAt) return;
-    const start = parseDbTimestamp(state.session.StartedAt);
-    const elapsed = Math.floor((Date.now() - start) / 1000);
-    const remaining = Math.max(0, QUESTION_SECONDS - elapsed);
-    updateTimer(remaining);
+  function setAnswerOptionsDisabled(disabled) {
+    document.querySelectorAll('.answer-option').forEach(el => {
+      el.disabled = !!disabled;
+      el.classList.toggle('disabled', !!disabled);
+    });
   }
 
-  async function submitAnswer(state) {
+  function markSelectedAnswer(selectedValue) {
+    document.querySelectorAll('.answer-option').forEach(el => {
+      el.classList.remove('selected');
+      if (el.dataset.value === selectedValue) {
+        el.classList.add('selected');
+      }
+    });
+  }
+
+  async function getCurrentQuestionStats(state) {
+    const [playerCountResult, attemptCountResult] = await Promise.all([
+      supabaseClient
+        .from('TblP01GamePlayer')
+        .select('*', { count: 'exact', head: true })
+        .eq('GameID', state.gameId),
+      supabaseClient
+        .from('TblP01Attempt')
+        .select('*', { count: 'exact', head: true })
+        .eq('GameID', state.gameId)
+        .eq('QID', state.question.QID)
+    ]);
+
+    return {
+      playerCount: playerCountResult.error ? 0 : (playerCountResult.count ?? 0),
+      answeredCount: attemptCountResult.error ? 0 : (attemptCountResult.count ?? 0)
+    };
+  }
+
+  async function chooseAndSubmitAnswer(state, selectedValue) {
     $('actionMsg').textContent = '';
 
-    if (!state.question || !state.session) return;
+    if (!state.question || !state.session || state.isSubmitting || state.phase !== 'question') return;
 
     const start = parseDbTimestamp(state.session.StartedAt);
     const elapsed = Math.floor((Date.now() - start) / 1000);
     if (elapsed >= QUESTION_SECONDS) {
       $('actionMsg').textContent = '本題時間已到，無法再送出。';
+      setAnswerOptionsDisabled(true);
       return;
     }
 
-    const selectedEl = document.querySelector('.answer-option.selected');
-    if (!selectedEl) {
-      $('actionMsg').textContent = '請先選擇一個答案。';
+    if (state.submittedQids.has(state.question.QID)) {
+      $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
+      setAnswerOptionsDisabled(true);
       return;
     }
 
-    const selectedValue = selectedEl.dataset.value;
+    state.isSubmitting = true;
+    markSelectedAnswer(selectedValue);
+
     const isCorrect = selectedValue === state.question.CA;
     const responseTime = elapsed;
 
@@ -504,8 +526,9 @@
         .limit(1);
 
       if (existing && existing.length > 0) {
-        $('actionMsg').textContent = '您已送出本題答案。';
-        $('submitBtn').disabled = true;
+        state.submittedQids.add(state.question.QID);
+        $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
+        setAnswerOptionsDisabled(true);
         return;
       }
 
@@ -545,45 +568,61 @@
         if (updateError) throw updateError;
       }
 
-      $('submitBtn').disabled = true;
-      document.querySelectorAll('.answer-option').forEach(el => el.classList.add('disabled'));
-      $('actionMsg').textContent = isCorrect ? '已送出，答案正確。' : '已送出。';
+      state.submittedQids.add(state.question.QID);
+      setAnswerOptionsDisabled(true);
+      $('actionMsg').textContent = '已送出答案，請等待本題結束。';
+
+      await handleQuestionAndResultPhase(state);
     } catch (err) {
       console.error(err);
       $('actionMsg').textContent = '送出答案失敗：' + (err.message || '未知錯誤');
+      setAnswerOptionsDisabled(false);
+    } finally {
+      state.isSubmitting = false;
     }
   }
 
-  async function handleResultPhase(state) {
-    if (!state.session || !state.question) return;
+  async function handleQuestionAndResultPhase(state) {
+    if (!state.session || !state.question || state.phase === 'ended') return;
 
     const start = parseDbTimestamp(state.session.StartedAt);
     const elapsed = Math.floor((Date.now() - start) / 1000);
+    const remaining = Math.max(0, QUESTION_SECONDS - elapsed);
+    const stats = await getCurrentQuestionStats(state);
+    state.currentAnswerStats = stats;
+    const allAnswered = stats.playerCount > 0 && stats.answeredCount >= stats.playerCount;
 
-    if (elapsed < QUESTION_SECONDS) {
-      $('submitBtn').disabled = state.submittedQids.has(state.question.QID);
+    if (!allAnswered && remaining > 0) {
+      state.phase = 'question';
+      updateTimer(remaining);
+      if (state.submittedQids.has(state.question.QID)) {
+        setAnswerOptionsDisabled(true);
+      }
       return;
     }
 
-    $('submitBtn').disabled = true;
-    document.querySelectorAll('.answer-option').forEach(el => el.classList.add('disabled'));
+    state.phase = 'result';
+    updateTimer(0);
+    setAnswerOptionsDisabled(true);
 
     if (state.resultShownForQid !== state.question.QID) {
-      await renderDistribution(state);
+      await renderDistribution(state, stats);
       await renderRanking(state);
       state.resultShownForQid = state.question.QID;
       if (state.isHost) {
         $('nextBtn').disabled = false;
+        $('actionMsg').textContent = allAnswered
+          ? '全體已作答完成。請由主持者決定是否進入下一題。'
+          : '本題時間結束。請由主持者決定是否進入下一題。';
+      } else {
+        $('actionMsg').textContent = allAnswered
+          ? '全體已作答完成，請等待主持者切換下一題。'
+          : '本題時間結束，請等待主持者切換下一題。';
       }
-    }
-
-    if (state.isHost && elapsed >= QUESTION_SECONDS + RESULT_SECONDS && state.hostAdvancedForQid !== state.question.QID) {
-      state.hostAdvancedForQid = state.question.QID;
-      await autoAdvanceQuestion(state);
     }
   }
 
-  async function renderDistribution(state) {
+  async function renderDistribution(state, stats = null) {
     const { data: attempts, error } = await supabaseClient
       .from('TblP01Attempt')
       .select('Selected')
@@ -605,7 +644,7 @@
     }).join('');
 
     $('distributionArea').innerHTML = html;
-    $('correctArea').textContent = '正確答案：' + state.question.CA;
+    $('correctArea').textContent = '正確答案：' + state.question.CA + (stats ? ` ｜ 已作答 ${stats.answeredCount}/${stats.playerCount} 人` : '');
   }
 
   async function renderRanking(state) {
