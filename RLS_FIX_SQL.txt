@@ -1,0 +1,21 @@
+-- 建議修正：讓前端可讀取同一場競賽的作答資料
+-- 若您目前的 RLS 讓 TblP01Attempt 可以 insert 但不能 select，
+-- 就會出現：玩家已作答，但統計永遠顯示 0/2。
+
+-- 方案 A：如果這個專案允許公開讀取同場競賽的作答資料（最簡單）
+alter table public."TblP01Attempt" enable row level security;
+
+drop policy if exists "p01_attempt_select_all" on public."TblP01Attempt";
+create policy "p01_attempt_select_all"
+on public."TblP01Attempt"
+for select
+using (true);
+
+-- 方案 B：若您要較保守，可只允許已登入（anon key 下通常仍視情況而定）
+-- create policy "p01_attempt_select_auth"
+-- on public."TblP01Attempt"
+-- for select
+-- to authenticated, anon
+-- using (true);
+
+-- 若還沒有 insert policy，請保留原本可運作的 insert policy。

@@ -488,6 +488,10 @@
     const players = playersResult.error ? [] : (playersResult.data || []);
     const attempts = attemptsResult.error ? [] : (attemptsResult.data || []);
 
+    if (!attemptsResult.error && players.length > 0 && attempts.length === 0) {
+      console.log('DEBUG: TblP01Attempt select returned 0 rows for current question. If players have already answered, check RLS SELECT policy on TblP01Attempt.');
+    }
+
     return {
       playerCount: players.length,
       answeredCount: attempts.length
