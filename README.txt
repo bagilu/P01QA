@@ -1,14 +1,1 @@
-P01我的卡呼
-慈濟大學經營管理學系學生專題
-
-這個版本包含以下改版：
-1. 首頁標題與副標題已更新。
-2. 建立競賽時改為兩層類別選取：第一層顯示大類別，第二層以 checkbox 複選。
-3. 建立競賽後先進入等待畫面，不立即顯示第一題；主持者可按「開始第一題」。
-4. 主持控制區移到左側答案區下方；本題統計移到右側。
-5. 保留目前的雙排行榜：答對率、答對數。
-
-部署提醒：
-1. 請把您自己的 config.js 複製回來，否則系統無法連到 Supabase。
-2. 請先到 Supabase 執行 P01_SQL_Upgrade.sql。
-3. 若本題統計仍為 0，請檢查 TblP01Attempt 的 RLS SELECT policy。
+Replace config.example.js with your config.js
