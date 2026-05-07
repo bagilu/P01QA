@@ -1,30 +1,91 @@
-body { background:#f4f7fb; color:#000; }
-.app-card { border:0; border-radius:24px; box-shadow:0 12px 30px rgba(0,0,0,.08); }
-.mode-card, .question-box { background:#fff; border:1px solid #e7edf5; border-radius:20px; padding:24px; box-shadow:0 4px 14px rgba(0,0,0,.04); color:#000; }
-.mode-title, .section-title { font-size:1.1rem; font-weight:700; color:#000; }
-.soft-label, .small-muted { color:#000; }
-.sub-title { color:#000; font-weight:600; }
-.sub-title .dept-highlight { display:inline-block; margin:0 .15rem; padding:.12rem .45rem; border-radius:.45rem; background:#c86414; color:#fff; font-weight:800; }
-.form-label, .form-check-label, .category-main-title, .category-main-card, .category-check, .question-box, .mode-card, .game-main-title, #questionText, #distributionArea, #rankArea, #correctArea, #currentUser, #currentQCat, #waitingPlayerText, #waitingNonHostText, #waitingPanel, #nonHostTools, #actionMsg, #createMsg, #joinMsg { color:#000; }
-.form-control, .form-select { color:#000; }
-.form-control::placeholder { color:#6c757d; }
-.game-main-title { font-size:1.8rem; }
-.game-code { font-size:2rem; font-weight:800; letter-spacing:.2rem; }
-.stat-pill { display:inline-block; background:#edf3ff; border-radius:999px; padding:8px 14px; margin-left:8px; margin-top:6px; font-weight:600; }
-.quiz-timer { display:inline-flex; justify-content:center; align-items:center; width:64px; height:64px; border-radius:50%; background:#fff2db; font-size:1.4rem; font-weight:800; border:3px solid #ffd08a; }
-.answer-option { display:block; width:100%; margin-bottom:12px; padding:14px 16px; text-align:left; border-radius:16px; border:1px solid #dbe5f0; background:#f9fbff; font-size:1.05rem; transition:.15s; }
-.answer-option:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.06); }
-.answer-option.selected { border-color:#4a8cff; background:#eaf2ff; }
-.answer-option.disabled { opacity:.72; }
-.rank-table th, .rank-table td { white-space:nowrap; }
-.header-actions { display:flex; justify-content:flex-end; }
-.waiting-panel { border:2px dashed #d9e5f5; background:#fbfdff; }
-.category-board { display:grid; gap:16px; }
-.category-main-card { border:1px solid #dbe5f0; border-radius:18px; padding:16px; background:#fbfdff; }
-.category-main-title { font-size:1.05rem; font-weight:700; margin-bottom:12px; }
-.category-sub-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px 16px; }
-.form-check.category-check { background:#fff; border:1px solid #ebf0f6; border-radius:12px; padding:10px 12px 10px 38px; margin:0; }
-.form-check.category-check .form-check-input { margin-top:.2rem; }
-@media (max-width: 991px) {
-  .stat-pill { margin-left:0; margin-right:8px; }
+body {
+  font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+  background: linear-gradient(180deg, #eef7ff 0%, #fff6df 100%);
+  color: #1f2937;
+  margin: 0;
+}
+
+.game-card, .card {
+  width: min(92vw, 440px);
+  margin: 24px auto;
+  background: #ffffff;
+  border-radius: 26px;
+  padding: 20px;
+  box-shadow: 0 14px 34px rgba(45, 64, 90, 0.15);
+  border: 3px solid #ffd54f;
+}
+
+button, .big-button {
+  border: 0;
+  border-radius: 18px;
+  padding: 13px 16px;
+  font-weight: 800;
+  background: #4fc3f7;
+  color: white;
+  cursor: pointer;
+}
+
+.status-message {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.status-message.success {
+  color: #16814a;
+}
+
+.status-message.error {
+  color: #c62828;
+}
+
+.hidden {
+  display: none;
+}
+
+.flower-notice-card {
+  width: min(92vw, 330px);
+  min-height: 210px;
+  padding: 18px 16px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%);
+  border: 3px solid #ffd54f;
+  box-shadow: 0 16px 36px rgba(120, 78, 32, 0.16);
+  text-align: center;
+  animation: p04PopIn 420ms ease-out both;
+}
+
+.flower-emoji {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.flower-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #f57c00;
+  margin-bottom: 8px;
+}
+
+.flower-message {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.flower-message strong {
+  color: #d84315;
+  font-weight: 900;
+}
+
+.flower-subtitle {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+@keyframes p04PopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
