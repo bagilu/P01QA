@@ -336,6 +336,9 @@
       phase: 'waiting',
       isSubmitting: false,
       currentAnswerStats: null,
+      players: [],
+      attempts: [],
+      playerCount: 0,
       pollInterval: null
     };
 
@@ -353,27 +356,35 @@
     $('currentQCat').textContent = state.qcat || '未指定';
   }
 
+  async function getGameState(state) {
+    const result = await callFunction('P01_get_game_state', {
+      game_id: state.gameId,
+      game_code: state.gameCode,
+      user_id: state.userId
+    });
+
+    state.players = result.players || [];
+    state.attempts = result.attempts || [];
+    state.playerCount = typeof result.player_count === 'number' ? result.player_count : state.players.length;
+
+    if ($('playerCount')) $('playerCount').textContent = state.playerCount;
+    if ($('waitingPlayerText')) $('waitingPlayerText').textContent = `目前加入人數：${state.playerCount} 人`;
+
+    return result.session;
+  }
+
   async function refreshSession(state, forceReloadQuestion) {
     try {
-      const { data: sessions, error } = await supabaseClient
-        .from('TblP01GameSession')
-        .select('*')
-        .eq('GameID', state.gameId)
-        .limit(1);
-
-      if (error) throw error;
-      if (!sessions || sessions.length === 0) {
+      const session = await getGameState(state);
+      if (!session || !session.GameID) {
         throw new Error('找不到競賽資料。');
       }
 
-      const session = sessions[0];
       const previousQid = state.session?.CurrentQID;
       state.session = session;
       applySessionSelectionsToState(state, session);
 
       $('questionNo').textContent = session.CurrentQuestionNo || 0;
-      const playerCount = await refreshPlayerCount(state);
-      $('waitingPlayerText').textContent = `目前加入人數：${playerCount} 人`;
 
       if (session.Status === 'ended') {
         showEndedState(state);
@@ -392,6 +403,7 @@
         await loadCurrentQuestion(state, session.CurrentQID);
       }
 
+      await getGameState(state);
       await handleQuestionAndResultPhase(state);
     } catch (err) {
       console.error(err);
@@ -439,21 +451,11 @@
   }
 
   async function refreshPlayerCount(state) {
-    // v19: 改用一般 select 讀取玩家清單，而不是 head/count。
-    // 某些 RLS / PostgREST 設定下，head count 可能不穩定，導致主持人等待畫面的人數不更新。
-    const { data, error } = await supabaseClient
-      .from('TblP01GamePlayer')
-      .select('UserID')
-      .eq('GameID', state.gameId);
-
-    if (!error) {
-      const count = (data || []).length;
-      $('playerCount').textContent = count;
-      if ($('waitingPlayerText')) $('waitingPlayerText').textContent = `目前加入人數：${count} 人`;
-      return count;
-    }
-    console.error('refreshPlayerCount failed', error);
-    return 0;
+    // v20: 參加人數改由 P01_get_game_state 回傳，避免主持人端被 RLS / PostgREST select 狀態影響。
+    const count = state.playerCount || (state.players || []).length || 0;
+    if ($('playerCount')) $('playerCount').textContent = count;
+    if ($('waitingPlayerText')) $('waitingPlayerText').textContent = `目前加入人數：${count} 人`;
+    return count;
   }
 
   async function loadCurrentQuestion(state, qid) {
@@ -472,16 +474,11 @@
 
     renderQuestionObject(state, questions[0]);
 
-    // v19: 主持人也是玩家，也要檢查自己是否已作答。
-    const { data: attempts } = await supabaseClient
-      .from('TblP01Attempt')
-      .select('QID')
-      .eq('GameID', state.gameId)
-      .eq('UserID', state.userId)
-      .eq('QID', state.question.QID)
-      .limit(1);
-
-    const alreadySubmitted = !!(attempts && attempts.length > 0);
+    // v20: 主持人也是玩家，也要檢查自己是否已作答。
+    // 作答紀錄改由 P01_get_game_state 回傳，避免主持人端直接讀 TblP01Attempt 時受 RLS 狀態影響。
+    const alreadySubmitted = (state.attempts || []).some(item =>
+      String(item.UserID) === String(state.userId) && Number(item.QID) === Number(state.question.QID)
+    );
     if (alreadySubmitted) {
       state.submittedQids.add(state.question.QID);
       setAnswerOptionsDisabled(true);
@@ -554,22 +551,10 @@
   }
 
   async function getCurrentQuestionStats(state) {
-    const [playersResult, attemptsResult] = await Promise.all([
-      supabaseClient
-        .from('TblP01GamePlayer')
-        .select('UserID')
-        .eq('GameID', state.gameId),
-      supabaseClient
-        .from('TblP01Attempt')
-        .select('UserID, QID')
-        .eq('GameID', state.gameId)
-        .eq('QID', state.question.QID)
-    ]);
-
-    if (playersResult.error) throw playersResult.error;
-    if (attemptsResult.error) throw attemptsResult.error;
-    const players = playersResult.data || [];
-    const attempts = attemptsResult.data || [];
+    // 每次判斷是否全體作答前，先透過 Function 取得最新玩家與作答狀態。
+    await getGameState(state);
+    const players = state.players || [];
+    const attempts = (state.attempts || []).filter(item => Number(item.QID) === Number(state.question.QID));
 
     return {
       playerCount: players.length,
@@ -680,17 +665,13 @@
   }
 
   async function renderDistribution(state, stats = null) {
-    const { data: attempts, error } = await supabaseClient
-      .from('TblP01Attempt')
-      .select('Selected, UserID, IsCorrect, Score')
-      .eq('GameID', state.gameId)
-      .eq('QID', state.question.QID);
-
-    if (error) throw error;
+    // v20: 作答分布改用 P01_get_game_state 回傳資料，避免直接讀 Attempt 時受 RLS 影響。
+    await getGameState(state);
+    const attempts = (state.attempts || []).filter(item => Number(item.QID) === Number(state.question.QID));
 
     const counts = {};
     state.answers.forEach(answer => { counts[answer] = 0; });
-    (attempts || []).forEach(item => {
+    attempts.forEach(item => {
       counts[item.Selected] = (counts[item.Selected] || 0) + 1;
     });
 
@@ -700,7 +681,7 @@
       return `<div class="mb-2"><strong>${label}.</strong> ${escapeHtml(answer)} — ${counts[answer] || 0} 人 ${marker}</div>`;
     }).join('');
 
-    const scoreRows = (attempts || [])
+    const scoreRows = attempts
       .filter(item => item.IsCorrect)
       .sort((a, b) => (b.Score || 0) - (a.Score || 0))
       .map(item => `<div class="small-muted">${escapeHtml(item.UserID)}：${item.Score || 0} 分</div>`)
@@ -711,14 +692,9 @@
   }
 
   async function renderRanking(state) {
-    const { data: players, error } = await supabaseClient
-      .from('TblP01GamePlayer')
-      .select('UserID, CorrectCount, AnsweredCount, TotalScore')
-      .eq('GameID', state.gameId);
-
-    if (error) throw error;
-
-    const basePlayers = (players || []).map(player => ({
+    // v20: 排行榜改用 P01_get_game_state 回傳資料，避免主持人端直接讀 GamePlayer 失敗。
+    await getGameState(state);
+    const basePlayers = (state.players || []).map(player => ({
       UserID: player.UserID,
       CorrectCount: player.CorrectCount || 0,
       AnsweredCount: player.AnsweredCount || 0,
