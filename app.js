@@ -48,10 +48,14 @@
 
   function parseDbTimestamp(value) {
     if (!value) return null;
-    if (/([zZ]|[+-]\d{2}:\d{2})$/.test(value)) {
-      return new Date(value).getTime();
+    let text = String(value).trim().replace(' ', 'T');
+    // Supabase 若欄位是 timestamp without time zone，可能回傳沒有 Z / +00:00 的字串。
+    // 這類 StartedAt 由 Edge Function 寫入 ISO UTC 時間，前端必須以 UTC 解讀，否則台灣時區會被誤判為已過 8 小時，導致題目一出現就結束。
+    if (!/([zZ]|[+-]\d{2}:\d{2})$/.test(text)) {
+      text += 'Z';
     }
-    return new Date(String(value).replace(' ', 'T')).getTime();
+    const ms = new Date(text).getTime();
+    return Number.isFinite(ms) ? ms : null;
   }
 
   function escapeHtml(text) {
@@ -397,6 +401,7 @@
 
   function showWaitingState(state) {
     state.phase = 'waiting';
+    setResultOnlyMode(false);
     $('waitingPanel').style.display = 'block';
     $('playLayout').style.display = 'none';
     updateTimer(QUESTION_SECONDS);
@@ -410,8 +415,21 @@
     $('playLayout').style.display = 'flex';
   }
 
+  function setResultOnlyMode(enabled) {
+    const questionColumn = $('questionColumn');
+    const rankColumn = $('rankColumn');
+    const resultPanel = $('resultPanel');
+    if (questionColumn) questionColumn.style.display = enabled ? 'none' : '';
+    if (resultPanel) resultPanel.style.display = enabled ? 'none' : '';
+    if (rankColumn) {
+      rankColumn.classList.toggle('col-lg-4', !enabled);
+      rankColumn.classList.toggle('col-lg-12', !!enabled);
+    }
+  }
+
   function showEndedState(state) {
     state.phase = 'ended';
+    setResultOnlyMode(true);
     $('waitingPanel').style.display = 'none';
     $('playLayout').style.display = 'flex';
     updateTimer(0);
@@ -449,6 +467,8 @@
 
     state.question = questions[0];
     addSeenQid(state.gameId, qid);
+    setResultOnlyMode(false);
+    if ($('resultStatus')) $('resultStatus').textContent = '';
     state.phase = 'question';
     state.currentAnswerStats = null;
     state.isSubmitting = false;
@@ -530,8 +550,10 @@
         .eq('QID', state.question.QID)
     ]);
 
-    const players = playersResult.error ? [] : (playersResult.data || []);
-    const attempts = attemptsResult.error ? [] : (attemptsResult.data || []);
+    if (playersResult.error) throw playersResult.error;
+    if (attemptsResult.error) throw attemptsResult.error;
+    const players = playersResult.data || [];
+    const attempts = attemptsResult.data || [];
 
     return {
       playerCount: players.length,
@@ -610,7 +632,9 @@
 
     if (!allAnswered && !timeUp) {
       state.phase = 'question';
+      setResultOnlyMode(false);
       updateTimer(remaining);
+      if ($('resultStatus')) $('resultStatus').textContent = '';
       if (state.submittedQids.has(state.question.QID)) {
         setAnswerOptionsDisabled(true);
       }
@@ -623,6 +647,7 @@
     state.phase = 'result';
     updateTimer(0);
     setAnswerOptionsDisabled(true);
+    setResultOnlyMode(true);
 
     if (state.isHost) {
       $('nextBtn').disabled = false;
@@ -631,15 +656,11 @@
     await renderDistribution(state, stats);
     await renderRanking(state);
 
-    if (state.isHost) {
-      $('actionMsg').textContent = allAnswered
-        ? '全體已作答完成，主持者現在可以按「下一題」。'
-        : '本題時間結束，主持者現在可以按「下一題」。';
-    } else {
-      $('actionMsg').textContent = allAnswered
-        ? '全體已作答完成，請等待主持者切換下一題。'
-        : '本題時間結束，請等待主持者切換下一題。';
-    }
+    const statusText = state.isHost
+      ? (allAnswered ? '全體已作答完成，主持者現在可以按「下一題」。' : '本題時間結束，主持者現在可以按「下一題」。')
+      : (allAnswered ? '全體已作答完成，請等待主持者切換下一題。' : '本題時間結束，請等待主持者切換下一題。');
+    if ($('resultStatus')) $('resultStatus').textContent = statusText;
+    if ($('actionMsg')) $('actionMsg').textContent = statusText;
   }
 
   async function renderDistribution(state, stats = null) {
