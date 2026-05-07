@@ -22,8 +22,9 @@
             </div>
           </div>
           <div class="text-lg-end">
-            <div class="header-actions mb-2">
+            <div class="header-actions mb-2 d-flex justify-content-lg-end gap-2">
               <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
+              <button id="endBtn" type="button" class="btn btn-outline-danger btn-sm" style="display:none;">結束競賽</button>
             </div>
             <div class="stat-pill">目前加入人數：<span id="playerCount">0</span> 人</div>
             <div class="stat-pill">目前題號：<span id="questionNo">0</span></div>
@@ -59,8 +60,7 @@
               <div class="section-title mb-3">主持控制</div>
               <div id="hostTools" style="display:none;">
                 <div class="small-muted mb-3">只有建立競賽的人可以控制下一題與結束競賽。</div>
-                <button id="nextBtn" class="btn btn-primary w-100 mb-2" disabled>下一題</button>
-                <button id="endBtn" class="btn btn-outline-danger w-100">結束競賽</button>
+                <button id="nextBtn" class="btn btn-primary w-100" disabled>下一題</button>
               </div>
               <div id="nonHostTools" class="small-muted">若您不是主持者，系統會自動跟隨目前競賽進度，並等待主持者切換下一題。</div>
             </div>

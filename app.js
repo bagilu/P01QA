@@ -28,7 +28,8 @@
     qcat: 'P01_QCAT',
     selectedQcats: 'P01_SELECTED_QCATS',
     host: 'P01_IS_HOST',
-    seenQidsPrefix: 'P01_SEEN_QIDS_'
+    seenQidsPrefix: 'P01_SEEN_QIDS_',
+    lastNickname: 'P01_LAST_NICKNAME'
   };
 
   const QUESTION_SECONDS = 30;
@@ -38,10 +39,11 @@
     return document.getElementById(id);
   }
 
-  function nowDbTimestamp() {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  async function callFunction(name, body) {
+    const { data, error } = await supabaseClient.functions.invoke(name, { body });
+    if (error) throw error;
+    if (!data || data.ok === false) throw new Error(data?.error || `${name} 執行失敗`);
+    return data;
   }
 
   function parseDbTimestamp(value) {
@@ -218,40 +220,17 @@
     }
 
     try {
-      const gameCode = await generateUniqueGameCode();
+      const result = await callFunction('P01_create_game', {
+        user_id: userId,
+        selected_qcats: selectedQcats
+      });
+      const session = result.session;
       const qcatText = selectedQcats.join('、');
-
-      const { data: inserted, error: sessionError } = await supabaseClient
-        .from('TblP01GameSession')
-        .insert([{
-          GameCode: gameCode,
-          HostUserID: userId,
-          QCat: qcatText,
-          SelectedQCats: JSON.stringify(selectedQcats),
-          CurrentQuestionNo: 0,
-          CurrentQID: null,
-          StartedAt: null,
-          Status: 'waiting'
-        }])
-        .select();
-
-      if (sessionError) throw sessionError;
-      const session = inserted[0];
-
-      const { error: playerError } = await supabaseClient
-        .from('TblP01GamePlayer')
-        .insert([{
-          GameID: session.GameID,
-          UserID: userId,
-          CorrectCount: 0,
-          AnsweredCount: 0
-        }]);
-
-      if (playerError) throw playerError;
 
       localStorage.setItem(STORAGE_KEYS.gameId, String(session.GameID));
       localStorage.setItem(STORAGE_KEYS.gameCode, session.GameCode);
       localStorage.setItem(STORAGE_KEYS.userId, userId);
+      localStorage.setItem(STORAGE_KEYS.lastNickname, userId);
       localStorage.setItem(STORAGE_KEYS.qcat, qcatText);
       localStorage.setItem(STORAGE_KEYS.selectedQcats, JSON.stringify(selectedQcats));
       localStorage.setItem(STORAGE_KEYS.host, 'true');
@@ -282,36 +261,16 @@
     }
 
     try {
-      const { data: sessions, error: sessionError } = await supabaseClient
-        .from('TblP01GameSession')
-        .select('*')
-        .eq('GameCode', gameCode)
-        .limit(1);
-
-      if (sessionError) throw sessionError;
-      if (!sessions || sessions.length === 0) {
-        throw new Error('找不到此競賽代號。');
-      }
-
-      const session = sessions[0];
-      if (session.Status === 'ended') {
-        throw new Error('此競賽已結束，無法加入。');
-      }
-
-      const { error: playerError } = await supabaseClient
-        .from('TblP01GamePlayer')
-        .upsert([{
-          GameID: session.GameID,
-          UserID: userId,
-          CorrectCount: 0,
-          AnsweredCount: 0
-        }], { onConflict: 'GameID,UserID' });
-
-      if (playerError) throw playerError;
+      const result = await callFunction('P01_join_game', {
+        user_id: userId,
+        game_code: gameCode
+      });
+      const session = result.session;
 
       localStorage.setItem(STORAGE_KEYS.gameId, String(session.GameID));
       localStorage.setItem(STORAGE_KEYS.gameCode, session.GameCode);
       localStorage.setItem(STORAGE_KEYS.userId, userId);
+      localStorage.setItem(STORAGE_KEYS.lastNickname, userId);
       localStorage.setItem(STORAGE_KEYS.qcat, session.QCat || '');
       localStorage.setItem(STORAGE_KEYS.selectedQcats, session.SelectedQCats || '[]');
       localStorage.setItem(STORAGE_KEYS.host, session.HostUserID === userId ? 'true' : 'false');
@@ -324,6 +283,11 @@
   }
 
   async function initIndexPage() {
+    const lastNickname = localStorage.getItem(STORAGE_KEYS.lastNickname) || localStorage.getItem(STORAGE_KEYS.userId) || '';
+    if (lastNickname) {
+      if ($('createUserId')) $('createUserId').value = lastNickname;
+      if ($('joinUserId')) $('joinUserId').value = lastNickname;
+    }
     await loadCategoryBoard();
     $('createGameBtn')?.addEventListener('click', createGame);
     $('joinGameBtn')?.addEventListener('click', joinGame);
@@ -349,6 +313,7 @@
     if (isHost) {
       $('hostTools').style.display = 'block';
       $('nonHostTools').style.display = 'none';
+      if ($('endBtn')) $('endBtn').style.display = 'inline-block';
       $('waitingHostTools').style.display = 'block';
       $('waitingNonHostText').style.display = 'none';
     }
@@ -371,7 +336,7 @@
     };
 
     $('nextBtn').addEventListener('click', () => manualNextQuestion(state));
-    $('endBtn').addEventListener('click', () => endGame(state));
+    $('endBtn')?.addEventListener('click', () => endGame(state));
     $('startBtn').addEventListener('click', () => startFirstQuestion(state));
 
     await refreshSession(state, true);
@@ -598,62 +563,27 @@
 
     const isCorrect = selectedValue === state.question.CA;
     const responseTime = elapsed;
+    const answerScore = isCorrect ? Math.max(0, QUESTION_SECONDS - elapsed) : 0;
 
     try {
-      const { data: existing } = await supabaseClient
-        .from('TblP01Attempt')
-        .select('AttemptID')
-        .eq('GameID', state.gameId)
-        .eq('UserID', state.userId)
-        .eq('QID', state.question.QID)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
-        state.submittedQids.add(state.question.QID);
-        $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
-        setAnswerOptionsDisabled(true);
-        return;
-      }
-
-      const { error: insertError } = await supabaseClient
-        .from('TblP01Attempt')
-        .insert([{
-          QID: state.question.QID,
-          UserID: state.userId,
-          Selected: selectedValue,
-          IsCorrect: isCorrect,
-          QCat: state.qcat,
-          ResponseTime: responseTime,
-          GameID: state.gameId,
-          GameCode: state.gameCode
-        }]);
-
-      if (insertError) throw insertError;
-
-      const { data: players, error: playerError } = await supabaseClient
-        .from('TblP01GamePlayer')
-        .select('PlayerID, CorrectCount, AnsweredCount')
-        .eq('GameID', state.gameId)
-        .eq('UserID', state.userId)
-        .limit(1);
-
-      if (playerError) throw playerError;
-      if (players && players.length > 0) {
-        const player = players[0];
-        const { error: updateError } = await supabaseClient
-          .from('TblP01GamePlayer')
-          .update({
-            CorrectCount: (player.CorrectCount || 0) + (isCorrect ? 1 : 0),
-            AnsweredCount: (player.AnsweredCount || 0) + 1
-          })
-          .eq('PlayerID', player.PlayerID);
-
-        if (updateError) throw updateError;
-      }
+      const result = await callFunction('P01_submit_answer', {
+        game_id: state.gameId,
+        game_code: state.gameCode,
+        user_id: state.userId,
+        qid: state.question.QID,
+        selected: selectedValue
+      });
 
       state.submittedQids.add(state.question.QID);
       setAnswerOptionsDisabled(true);
-      $('actionMsg').textContent = '已送出答案，請等待本題結束。';
+
+      if (result.already_submitted) {
+        $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
+      } else if (result.is_correct) {
+        $('actionMsg').textContent = `已送出答案，答對得 ${result.score || 0} 分，請等待本題結束。`;
+      } else {
+        $('actionMsg').textContent = '已送出答案，本題未得分，請等待本題結束。';
+      }
 
       await handleQuestionAndResultPhase(state);
     } catch (err) {
@@ -715,7 +645,7 @@
   async function renderDistribution(state, stats = null) {
     const { data: attempts, error } = await supabaseClient
       .from('TblP01Attempt')
-      .select('Selected')
+      .select('Selected, UserID, IsCorrect, Score')
       .eq('GameID', state.gameId)
       .eq('QID', state.question.QID);
 
@@ -733,14 +663,20 @@
       return `<div class="mb-2"><strong>${label}.</strong> ${escapeHtml(answer)} — ${counts[answer] || 0} 人 ${marker}</div>`;
     }).join('');
 
-    $('distributionArea').innerHTML = html;
+    const scoreRows = (attempts || [])
+      .filter(item => item.IsCorrect)
+      .sort((a, b) => (b.Score || 0) - (a.Score || 0))
+      .map(item => `<div class="small-muted">${escapeHtml(item.UserID)}：${item.Score || 0} 分</div>`)
+      .join('');
+
+    $('distributionArea').innerHTML = html + (scoreRows ? `<div class="mt-3 fw-bold">本題得分</div>${scoreRows}` : '');
     $('correctArea').textContent = '正確答案：' + state.question.CA + (stats ? ` ｜ 已作答 ${stats.answeredCount}/${stats.playerCount} 人` : '');
   }
 
   async function renderRanking(state) {
     const { data: players, error } = await supabaseClient
       .from('TblP01GamePlayer')
-      .select('UserID, CorrectCount, AnsweredCount')
+      .select('UserID, CorrectCount, AnsweredCount, TotalScore')
       .eq('GameID', state.gameId);
 
     if (error) throw error;
@@ -749,12 +685,13 @@
       UserID: player.UserID,
       CorrectCount: player.CorrectCount || 0,
       AnsweredCount: player.AnsweredCount || 0,
-      Score: (player.AnsweredCount || 0) > 0 ? (player.CorrectCount || 0) / player.AnsweredCount : 0
+      TotalScore: player.TotalScore || 0,
+      Accuracy: (player.AnsweredCount || 0) > 0 ? (player.CorrectCount || 0) / player.AnsweredCount : 0
     }));
 
     const rateRanked = [...basePlayers]
       .sort((a, b) => {
-        if (b.Score !== a.Score) return b.Score - a.Score;
+        if (b.Accuracy !== a.Accuracy) return b.Accuracy - a.Accuracy;
         if (b.CorrectCount !== a.CorrectCount) return b.CorrectCount - a.CorrectCount;
         if (b.AnsweredCount !== a.AnsweredCount) return b.AnsweredCount - a.AnsweredCount;
         return a.UserID.localeCompare(b.UserID);
@@ -764,8 +701,17 @@
     const countRanked = [...basePlayers]
       .sort((a, b) => {
         if (b.CorrectCount !== a.CorrectCount) return b.CorrectCount - a.CorrectCount;
-        if (b.Score !== a.Score) return b.Score - a.Score;
+        if (b.Accuracy !== a.Accuracy) return b.Accuracy - a.Accuracy;
         if (b.AnsweredCount !== a.AnsweredCount) return b.AnsweredCount - a.AnsweredCount;
+        return a.UserID.localeCompare(b.UserID);
+      })
+      .slice(0, 5);
+
+    const pointRanked = [...basePlayers]
+      .sort((a, b) => {
+        if (b.TotalScore !== a.TotalScore) return b.TotalScore - a.TotalScore;
+        if (b.CorrectCount !== a.CorrectCount) return b.CorrectCount - a.CorrectCount;
+        if (b.Accuracy !== a.Accuracy) return b.Accuracy - a.Accuracy;
         return a.UserID.localeCompare(b.UserID);
       })
       .slice(0, 5);
@@ -775,17 +721,37 @@
       return;
     }
 
-    const renderRows = (ranked, valueType) => ranked.map((player, idx) => `
-      <tr>
-        <td>${idx + 1}</td>
-        <td>${escapeHtml(player.UserID)}</td>
-        <td>${valueType === 'rate' ? `${(player.Score * 100).toFixed(1)}%` : player.CorrectCount}</td>
-        <td>${player.CorrectCount}/${player.AnsweredCount}</td>
-      </tr>
-    `).join('');
+    const renderRows = (ranked, valueType) => ranked.map((player, idx) => {
+      const value = valueType === 'rate'
+        ? `${(player.Accuracy * 100).toFixed(1)}%`
+        : (valueType === 'points' ? player.TotalScore : player.CorrectCount);
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(player.UserID)}</td>
+          <td>${value}</td>
+          <td>${player.CorrectCount}/${player.AnsweredCount}</td>
+        </tr>
+      `;
+    }).join('');
 
     $('rankArea').innerHTML = `
-      <div class="mb-3 fw-bold">排名一：答對率</div>
+      <div class="mb-3 fw-bold">排名一：搶答分數</div>
+      <div class="table-responsive mb-4">
+        <table class="table table-sm rank-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>名次</th>
+              <th>暱稱</th>
+              <th>總分</th>
+              <th>答對/作答</th>
+            </tr>
+          </thead>
+          <tbody>${renderRows(pointRanked, 'points')}</tbody>
+        </table>
+      </div>
+
+      <div class="mb-3 fw-bold">排名二：答對率</div>
       <div class="table-responsive mb-4">
         <table class="table table-sm rank-table align-middle mb-0">
           <thead>
@@ -800,7 +766,7 @@
         </table>
       </div>
 
-      <div class="mb-3 fw-bold">排名二：答對數</div>
+      <div class="mb-3 fw-bold">排名三：答對數</div>
       <div class="table-responsive">
         <table class="table table-sm rank-table align-middle mb-0">
           <thead>
@@ -824,17 +790,12 @@
       const firstQuestion = await getRandomQuestionByQCats(state.selectedQcats, getSeenQids(state.gameId));
       addSeenQid(state.gameId, firstQuestion.QID);
 
-      const { error } = await supabaseClient
-        .from('TblP01GameSession')
-        .update({
-          CurrentQuestionNo: 1,
-          CurrentQID: firstQuestion.QID,
-          StartedAt: nowDbTimestamp(),
-          Status: 'playing'
-        })
-        .eq('GameID', state.gameId);
-
-      if (error) throw error;
+      await callFunction('P01_set_question', {
+        game_id: state.gameId,
+        user_id: state.userId,
+        qid: firstQuestion.QID,
+        question_no: 1
+      });
       await refreshSession(state, true);
     } catch (err) {
       console.error(err);
@@ -854,17 +815,12 @@
       const nextQuestion = await getRandomQuestionByQCats(state.selectedQcats, excludedQids);
       addSeenQid(state.gameId, nextQuestion.QID);
 
-      const { error } = await supabaseClient
-        .from('TblP01GameSession')
-        .update({
-          CurrentQuestionNo: (state.session.CurrentQuestionNo || 0) + 1,
-          CurrentQID: nextQuestion.QID,
-          StartedAt: nowDbTimestamp(),
-          Status: 'playing'
-        })
-        .eq('GameID', state.gameId);
-
-      if (error) throw error;
+      await callFunction('P01_set_question', {
+        game_id: state.gameId,
+        user_id: state.userId,
+        qid: nextQuestion.QID,
+        question_no: (state.session.CurrentQuestionNo || 0) + 1
+      });
       await refreshSession(state, true);
     } catch (err) {
       console.error(err);
@@ -876,15 +832,10 @@
     if (!confirm('確定要結束這場競賽嗎？')) return;
 
     try {
-      const { error } = await supabaseClient
-        .from('TblP01GameSession')
-        .update({
-          Status: 'ended',
-          EndedAt: nowDbTimestamp()
-        })
-        .eq('GameID', state.gameId);
-
-      if (error) throw error;
+      await callFunction('P01_end_game', {
+        game_id: state.gameId,
+        user_id: state.userId
+      });
       await refreshSession(state, false);
     } catch (err) {
       console.error(err);
