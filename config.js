@@ -21,7 +21,12 @@ window.APP_CONFIG = {
     GET_RECORDS_BY_DATE:
       "https://mfljkyvdadxlrbxlboce.supabase.co/functions/v1/P04_get_records_by_date",
 
+    GET_MY_RECORDS:
+  "https://mfljkyvdadxlrbxlboce.supabase.co/functions/v1/P04_get_my_records",
+
     GET_RECENT_NOTICE:
       "https://mfljkyvdadxlrbxlboce.supabase.co/functions/v1/P04_get_recent_notice"
+
+    
   }
 };
