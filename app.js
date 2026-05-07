@@ -439,15 +439,20 @@
   }
 
   async function refreshPlayerCount(state) {
-    const { count, error } = await supabaseClient
+    // v19: 改用一般 select 讀取玩家清單，而不是 head/count。
+    // 某些 RLS / PostgREST 設定下，head count 可能不穩定，導致主持人等待畫面的人數不更新。
+    const { data, error } = await supabaseClient
       .from('TblP01GamePlayer')
-      .select('*', { count: 'exact', head: true })
+      .select('UserID')
       .eq('GameID', state.gameId);
 
     if (!error) {
-      $('playerCount').textContent = count ?? 0;
-      return count ?? 0;
+      const count = (data || []).length;
+      $('playerCount').textContent = count;
+      if ($('waitingPlayerText')) $('waitingPlayerText').textContent = `目前加入人數：${count} 人`;
+      return count;
     }
+    console.error('refreshPlayerCount failed', error);
     return 0;
   }
 
@@ -467,21 +472,20 @@
 
     renderQuestionObject(state, questions[0]);
 
-    if (!state.isHost) {
-      const { data: attempts } = await supabaseClient
-        .from('TblP01Attempt')
-        .select('QID')
-        .eq('GameID', state.gameId)
-        .eq('UserID', state.userId)
-        .eq('QID', state.question.QID)
-        .limit(1);
+    // v19: 主持人也是玩家，也要檢查自己是否已作答。
+    const { data: attempts } = await supabaseClient
+      .from('TblP01Attempt')
+      .select('QID')
+      .eq('GameID', state.gameId)
+      .eq('UserID', state.userId)
+      .eq('QID', state.question.QID)
+      .limit(1);
 
-      const alreadySubmitted = !!(attempts && attempts.length > 0);
-      if (alreadySubmitted) {
-        state.submittedQids.add(state.question.QID);
-        setAnswerOptionsDisabled(true);
-        $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
-      }
+    const alreadySubmitted = !!(attempts && attempts.length > 0);
+    if (alreadySubmitted) {
+      state.submittedQids.add(state.question.QID);
+      setAnswerOptionsDisabled(true);
+      $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
     }
   }
 
@@ -522,13 +526,11 @@
       answerArea.appendChild(option);
     });
 
-    // 主持人端只負責出題與看排行榜，不納入作答者；因此題目顯示後直接鎖住答案按鈕，避免誤送答。
-    if (state.isHost) {
-      setAnswerOptionsDisabled(true);
-      $('actionMsg').textContent = '主持人畫面：請等待參與者作答。';
-    } else {
-      setAnswerOptionsDisabled(false);
-    }
+    // v19: 主持人也是玩家。主持人開始出題後，也必須在自己的畫面作答。
+    setAnswerOptionsDisabled(false);
+    $('actionMsg').textContent = state.isHost
+      ? '主持人也需要作答。本題結束後會顯示三種排行榜。'
+      : '請選擇答案。';
   }
 
   function updateTimer(seconds) {
