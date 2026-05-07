@@ -465,8 +465,31 @@
       throw new Error('找不到目前題目。');
     }
 
-    state.question = questions[0];
-    addSeenQid(state.gameId, qid);
+    renderQuestionObject(state, questions[0]);
+
+    if (!state.isHost) {
+      const { data: attempts } = await supabaseClient
+        .from('TblP01Attempt')
+        .select('QID')
+        .eq('GameID', state.gameId)
+        .eq('UserID', state.userId)
+        .eq('QID', state.question.QID)
+        .limit(1);
+
+      const alreadySubmitted = !!(attempts && attempts.length > 0);
+      if (alreadySubmitted) {
+        state.submittedQids.add(state.question.QID);
+        setAnswerOptionsDisabled(true);
+        $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
+      }
+    }
+  }
+
+
+
+  function renderQuestionObject(state, question) {
+    state.question = question;
+    addSeenQid(state.gameId, question.QID);
     setResultOnlyMode(false);
     if ($('resultStatus')) $('resultStatus').textContent = '';
     state.phase = 'question';
@@ -499,19 +522,10 @@
       answerArea.appendChild(option);
     });
 
-    const { data: attempts } = await supabaseClient
-      .from('TblP01Attempt')
-      .select('QID')
-      .eq('GameID', state.gameId)
-      .eq('UserID', state.userId)
-      .eq('QID', state.question.QID)
-      .limit(1);
-
-    const alreadySubmitted = !!(attempts && attempts.length > 0);
-    if (alreadySubmitted) {
-      state.submittedQids.add(state.question.QID);
+    // 主持人端只負責出題與看排行榜，不納入作答者；因此題目顯示後直接鎖住答案按鈕，避免誤送答。
+    if (state.isHost) {
       setAnswerOptionsDisabled(true);
-      $('actionMsg').textContent = '您已送出本題答案，請等待本題結束。';
+      $('actionMsg').textContent = '主持人畫面：請等待參與者作答。';
     } else {
       setAnswerOptionsDisabled(false);
     }
@@ -811,13 +825,26 @@
       const firstQuestion = await getRandomQuestionByQCats(state.selectedQcats, getSeenQids(state.gameId));
       addSeenQid(state.gameId, firstQuestion.QID);
 
-      await callFunction('P01_set_question', {
+      const result = await callFunction('P01_set_question', {
         game_id: state.gameId,
         user_id: state.userId,
         qid: firstQuestion.QID,
         question_no: 1
       });
-      await refreshSession(state, true);
+
+      // Dashboard / RLS 環境下，主持人端不等待下一輪輪詢才更新畫面；
+      // 直接用已抽出的題目更新本機狀態，避免「按開始後畫面停在等待區」。
+      state.session = Object.assign({}, state.session || {}, result.session || {}, {
+        Status: 'playing',
+        CurrentQID: firstQuestion.QID,
+        CurrentQuestionNo: 1,
+        StartedAt: (result.session && result.session.StartedAt) || new Date().toISOString()
+      });
+      $('questionNo').textContent = state.session.CurrentQuestionNo || 1;
+      showPlayingState();
+      renderQuestionObject(state, firstQuestion);
+      await handleQuestionAndResultPhase(state);
+      setTimeout(() => refreshSession(state, true), 300);
     } catch (err) {
       console.error(err);
       $('startBtn').disabled = false;
@@ -836,13 +863,25 @@
       const nextQuestion = await getRandomQuestionByQCats(state.selectedQcats, excludedQids);
       addSeenQid(state.gameId, nextQuestion.QID);
 
-      await callFunction('P01_set_question', {
+      const nextNo = (state.session.CurrentQuestionNo || 0) + 1;
+      const result = await callFunction('P01_set_question', {
         game_id: state.gameId,
         user_id: state.userId,
         qid: nextQuestion.QID,
-        question_no: (state.session.CurrentQuestionNo || 0) + 1
+        question_no: nextNo
       });
-      await refreshSession(state, true);
+
+      state.session = Object.assign({}, state.session || {}, result.session || {}, {
+        Status: 'playing',
+        CurrentQID: nextQuestion.QID,
+        CurrentQuestionNo: nextNo,
+        StartedAt: (result.session && result.session.StartedAt) || new Date().toISOString()
+      });
+      $('questionNo').textContent = state.session.CurrentQuestionNo || nextNo;
+      showPlayingState();
+      renderQuestionObject(state, nextQuestion);
+      await handleQuestionAndResultPhase(state);
+      setTimeout(() => refreshSession(state, true), 300);
     } catch (err) {
       console.error(err);
       $('actionMsg').textContent = '切換下一題失敗：' + (err.message || '未知錯誤');
