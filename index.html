@@ -17,10 +17,12 @@
           <div class="soft-label">可以一個人競賽，也可以藉由 6 位數競賽代號，讓其他人加入同一場競賽。</div>
         </div>
 
-        <div class="row g-4">
-          <div class="col-lg-8">
-            <div class="mode-card h-100">
-              <div class="mode-title mb-2">建立競賽／自己玩</div>
+        <div class="row g-4" id="homeLayout">
+          <div class="col-lg-8" id="createPanelCol">
+            <details id="createPanelDetails" class="collapsible-card" open>
+              <summary>展開／收合：建立新競賽或自己玩</summary>
+              <div class="mode-card h-100 mt-3">
+                <div class="mode-title mb-2">建立競賽／自己玩</div>
               <div class="soft-label mb-3">請先輸入暱稱，並勾選要出題的小類別。建立後系統會先停留在等待畫面，等您按下「開始第一題」才正式開始。</div>
 
               <div class="mb-4">
@@ -37,20 +39,30 @@
 
               <button id="createGameBtn" class="btn btn-primary w-100">建立競賽</button>
               <div id="createMsg" class="text-danger mt-3"></div>
-            </div>
+              </div>
+            </details>
           </div>
 
-          <div class="col-lg-4">
+          <div class="col-lg-4" id="joinPanelCol">
             <div class="mode-card h-100">
               <div class="mode-title mb-2">加入競賽</div>
-              <div class="soft-label mb-3">若朋友已建立競賽，請輸入暱稱與 6 位數競賽代號加入。同一場競賽中的所有人會看到同一題。</div>
+              <div class="soft-label mb-3" id="joinIntroText">若朋友已建立競賽，請輸入暱稱與 6 位數競賽代號加入。同一場競賽中的所有人會看到同一題。</div>
+              <div id="scanJoinBox" class="scan-join-box mb-3" style="display:none;">
+                <div class="qr-card justify-content-center">
+                  <div id="scanJoinQr" class="qr-box"></div>
+                  <div>
+                    <div class="fw-bold">掃描加入競賽</div>
+                    <div class="small-muted">QR Code 已包含競賽代號；請輸入暱稱後加入。</div>
+                  </div>
+                </div>
+              </div>
 
               <div class="mb-3">
                 <label class="form-label required-label">暱稱 <span class="required-star">*</span> <span class="required-text">必填</span></label>
                 <input type="text" id="joinUserId" class="form-control" placeholder="例如：Amy" required>
               </div>
 
-              <div class="mb-3">
+              <div class="mb-3" id="joinCodeGroup">
                 <label class="form-label">競賽代號</label>
                 <input type="text" id="joinCode" class="form-control" maxlength="6" placeholder="請輸入 6 位數字">
               </div>

@@ -341,6 +341,18 @@
     const codeFromUrl = getCodeFromUrl();
     if (codeFromUrl && $('joinCode')) {
       $('joinCode').value = codeFromUrl;
+      document.body.classList.add('scan-join-mode');
+      const createDetails = $('createPanelDetails');
+      if (createDetails) createDetails.open = false;
+      const createCol = $('createPanelCol');
+      const joinCol = $('joinPanelCol');
+      if (createCol) createCol.className = 'col-lg-4 order-lg-2';
+      if (joinCol) joinCol.className = 'col-lg-8 order-lg-1';
+      const codeGroup = $('joinCodeGroup');
+      if (codeGroup) codeGroup.style.display = 'none';
+      const scanBox = $('scanJoinBox');
+      if (scanBox) scanBox.style.display = 'block';
+      renderQrCode('scanJoinQr', getJoinUrl(codeFromUrl), 132);
       const hint = $('joinHint');
       if (hint) {
         hint.style.display = 'block';
@@ -474,6 +486,9 @@
     setResultOnlyMode(false);
     $('waitingPanel').style.display = 'block';
     $('playLayout').style.display = 'none';
+    document.body.classList.remove('playing-compact-mode');
+    const info = $('gameInfoDetails');
+    if (info) info.open = true;
     updateTimer(QUESTION_SECONDS);
     if (state.isHost) {
       $('startBtn').disabled = false;
@@ -483,6 +498,9 @@
   function showPlayingState() {
     $('waitingPanel').style.display = 'none';
     $('playLayout').style.display = 'flex';
+    document.body.classList.add('playing-compact-mode');
+    const info = $('gameInfoDetails');
+    if (info) info.open = false;
   }
 
   function setResultOnlyMode(enabled) {
@@ -502,6 +520,9 @@
     setResultOnlyMode(true);
     $('waitingPanel').style.display = 'none';
     $('playLayout').style.display = 'flex';
+    document.body.classList.add('playing-compact-mode');
+    const info = $('gameInfoDetails');
+    if (info) info.open = false;
     updateTimer(0);
     $('actionMsg').textContent = '主持者已結束本場競賽。';
     $('nextBtn').disabled = true;

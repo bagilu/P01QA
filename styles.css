@@ -371,3 +371,93 @@ h1::after, .game-main-title::after {
   .qr-card, .share-strip { align-items:flex-start; }
   .share-strip { max-width:100%; }
 }
+
+/* v23: compact scan/join and in-game focused layout */
+.collapsible-card {
+  border: 2px dashed rgba(39,103,216,.24);
+  border-radius: 24px;
+  padding: 12px;
+  background: rgba(255,255,255,.54);
+}
+.collapsible-card > summary,
+.game-info-details > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-weight: 900;
+  color: var(--p01-blue);
+  background: linear-gradient(135deg, rgba(232,241,255,.95), rgba(255,246,225,.92));
+  border: 1px solid rgba(39,103,216,.18);
+  border-radius: 18px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 18px rgba(40,70,120,.06);
+}
+.collapsible-card > summary::-webkit-details-marker,
+.game-info-details > summary::-webkit-details-marker { display:none; }
+.collapsible-card > summary::before,
+.game-info-details > summary::before {
+  content: "＋";
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  margin-right:8px;
+  border-radius:999px;
+  background:#fff;
+  color:var(--p01-orange);
+  border:1px solid rgba(255,138,29,.35);
+}
+.collapsible-card[open] > summary::before,
+.game-info-details[open] > summary::before { content:"－"; }
+
+.scan-join-mode .hero-block .soft-label {
+  display:none;
+}
+.scan-join-mode #joinPanelCol .mode-card {
+  border: 3px solid rgba(255,138,29,.36);
+  box-shadow: 0 20px 45px rgba(255,138,29,.16);
+}
+.scan-join-mode #joinIntroText {
+  display:none;
+}
+.scan-join-box .qr-card {
+  background: linear-gradient(135deg, #fff, #f3f8ff);
+}
+
+.game-top-shell {
+  background: rgba(255,255,255,.58);
+  border: 1px solid rgba(39,103,216,.12);
+  border-radius: 24px;
+  padding: 12px;
+}
+.game-info-details:not([open]) {
+  margin-bottom: 0;
+}
+.game-status-bar {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.playing-compact-mode .game-top-shell {
+  padding: 10px;
+  margin-bottom: 14px !important;
+}
+.playing-compact-mode .game-info-details > summary {
+  padding: 9px 13px;
+  font-size: .94rem;
+}
+.playing-compact-mode .game-status-bar {
+  justify-content: space-between;
+}
+.playing-compact-mode .quiz-timer {
+  margin-left:auto;
+}
+
+@media (max-width: 768px) {
+  .game-status-bar { justify-content:stretch; }
+  .game-status-bar .stat-pill { flex:1 1 auto; text-align:center; }
+  .game-status-bar .quiz-timer { margin-left:0; }
+}

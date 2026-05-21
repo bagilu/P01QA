@@ -11,32 +11,37 @@
   <div class="container py-4" style="max-width: 1200px;">
     <div class="card app-card">
       <div class="card-body p-4">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
-          <div>
-            <h1 class="mb-1 game-main-title">P01我的卡呼</h1>
-            <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
-            <div class="small-muted">競賽代號</div>
-            <div id="gameCode" class="game-code">------</div>
-            <div class="share-strip mt-3">
-              <div id="shareQrHeader" class="qr-mini"></div>
+        <div class="game-top-shell mb-4" id="gameTopShell">
+          <details id="gameInfoDetails" class="game-info-details" open>
+            <summary>展開／收合：競賽代號、QR Code、題目類別與回首頁</summary>
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mt-3">
               <div>
-                <div class="fw-bold">掃描加入此競賽</div>
-                <div class="small-muted">QR Code 已包含 6 位數代號，加入者只需填暱稱。</div>
-                <a id="shareLinkHeader" class="small" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+                <h1 class="mb-1 game-main-title">P01我的卡呼</h1>
+                <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
+                <div class="small-muted">競賽代號</div>
+                <div id="gameCode" class="game-code">------</div>
+                <div class="share-strip mt-3">
+                  <div id="shareQrHeader" class="qr-mini"></div>
+                  <div>
+                    <div class="fw-bold">掃描加入此競賽</div>
+                    <div class="small-muted">QR Code 已包含 6 位數代號，加入者只需填暱稱。</div>
+                    <a id="shareLinkHeader" class="small" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+                  </div>
+                </div>
+                <div class="small-muted">
+                  使用者：<span id="currentUser"></span> ｜ 題目類別：<span id="currentQCat"></span>
+                </div>
+              </div>
+              <div class="header-actions d-flex gap-2">
+                <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
+                <button id="endBtn" type="button" class="btn btn-outline-danger btn-sm" style="display:none;">結束競賽</button>
               </div>
             </div>
-            <div class="small-muted">
-              使用者：<span id="currentUser"></span> ｜ 題目類別：<span id="currentQCat"></span>
-            </div>
-          </div>
-          <div class="text-lg-end">
-            <div class="header-actions mb-2 d-flex justify-content-lg-end gap-2">
-              <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
-              <button id="endBtn" type="button" class="btn btn-outline-danger btn-sm" style="display:none;">結束競賽</button>
-            </div>
+          </details>
+          <div class="game-status-bar mt-3">
             <div class="stat-pill">目前加入人數：<span id="playerCount">0</span> 人</div>
             <div class="stat-pill">目前題號：<span id="questionNo">0</span></div>
-            <div class="quiz-timer mt-2" id="timer">30</div>
+            <div class="quiz-timer" id="timer">30</div>
           </div>
         </div>
 
