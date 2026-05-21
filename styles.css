@@ -298,3 +298,76 @@ h1::after, .game-main-title::after {
   .mode-card, .question-box { padding:20px; }
   .game-code { font-size:1.65rem; letter-spacing:.16rem; }
 }
+
+.required-label { font-weight:900; }
+.required-star {
+  color:#e60023;
+  font-size:1.08rem;
+  font-weight:950;
+  vertical-align:middle;
+}
+.required-text {
+  color:#e60023;
+  font-size:.86rem;
+  font-weight:850;
+}
+.join-hint {
+  color:#7a3d00;
+  background:#fff4dc;
+  border:1px solid rgba(255,138,29,.34);
+  border-radius:16px;
+  padding:10px 12px;
+  font-weight:700;
+}
+.form-check.category-check {
+  border:2px solid rgba(23,32,51,.34);
+}
+.form-check.category-check .form-check-input {
+  width:1.18em;
+  height:1.18em;
+  border:2px solid #2b3d5c;
+  background-color:#fff;
+  box-shadow:0 0 0 2px rgba(255,255,255,.9);
+}
+.form-check.category-check .form-check-input:focus {
+  border-color:var(--p01-blue);
+  box-shadow:0 0 0 .22rem rgba(39,103,216,.20);
+}
+.form-check.category-check .form-check-input:checked {
+  background-color:var(--p01-orange);
+  border-color:#c65a00;
+}
+.qr-card, .share-strip {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  color:var(--p01-ink);
+  background:linear-gradient(135deg, #ffffff, #fff8e8);
+  border:1px solid rgba(255,138,29,.28);
+  border-radius:20px;
+  padding:14px;
+  box-shadow:0 8px 18px rgba(40,70,120,.06);
+}
+.share-strip {
+  max-width:420px;
+  padding:10px 12px;
+}
+.qr-box, .qr-mini {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex:0 0 auto;
+  background:#fff;
+  border:2px solid rgba(23,32,51,.12);
+  border-radius:16px;
+  padding:8px;
+}
+.qr-mini { padding:6px; }
+.qr-box img, .qr-box canvas, .qr-mini img, .qr-mini canvas {
+  display:block;
+  border-radius:6px;
+}
+@media (max-width: 576px) {
+  .qr-card, .share-strip { align-items:flex-start; }
+  .share-strip { max-width:100%; }
+}

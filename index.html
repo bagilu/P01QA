@@ -24,8 +24,8 @@
               <div class="soft-label mb-3">請先輸入暱稱，並勾選要出題的小類別。建立後系統會先停留在等待畫面，等您按下「開始第一題」才正式開始。</div>
 
               <div class="mb-4">
-                <label class="form-label">暱稱</label>
-                <input type="text" id="createUserId" class="form-control" placeholder="例如：Jimmy">
+                <label class="form-label required-label">暱稱 <span class="required-star">*</span> <span class="required-text">必填</span></label>
+                <input type="text" id="createUserId" class="form-control" placeholder="例如：Jimmy" required>
               </div>
 
               <div class="mb-3">
@@ -46,8 +46,8 @@
               <div class="soft-label mb-3">若朋友已建立競賽，請輸入暱稱與 6 位數競賽代號加入。同一場競賽中的所有人會看到同一題。</div>
 
               <div class="mb-3">
-                <label class="form-label">暱稱</label>
-                <input type="text" id="joinUserId" class="form-control" placeholder="例如：Amy">
+                <label class="form-label required-label">暱稱 <span class="required-star">*</span> <span class="required-text">必填</span></label>
+                <input type="text" id="joinUserId" class="form-control" placeholder="例如：Amy" required>
               </div>
 
               <div class="mb-3">
@@ -56,6 +56,7 @@
               </div>
 
               <button id="joinGameBtn" class="btn btn-success w-100">加入競賽</button>
+              <div id="joinHint" class="join-hint mt-3" style="display:none;"></div>
               <div id="joinMsg" class="text-danger mt-3"></div>
             </div>
           </div>
@@ -65,6 +66,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

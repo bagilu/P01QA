@@ -104,6 +104,51 @@
     return String(raw).split('|').map(x => x.trim()).filter(Boolean);
   }
 
+
+  function getJoinUrl(gameCode) {
+    const base = window.location.href.replace(/game\.html.*$/i, 'index.html').replace(/index\.html.*$/i, 'index.html');
+    const url = new URL(base, window.location.href);
+    url.searchParams.set('code', gameCode || '');
+    return url.toString();
+  }
+
+  function renderQrCode(elementId, url, size = 128) {
+    const el = $(elementId);
+    if (!el || !url) return;
+    el.innerHTML = '';
+    if (window.QRCode) {
+      new window.QRCode(el, {
+        text: url,
+        width: size,
+        height: size,
+        correctLevel: window.QRCode.CorrectLevel.M
+      });
+    } else {
+      el.innerHTML = '<div class="small-muted">QRCode 載入中。若未顯示，請使用下方加入連結。</div>';
+    }
+  }
+
+  function setupShareQr(gameCode) {
+    if (!gameCode) return;
+    const url = getJoinUrl(gameCode);
+    renderQrCode('shareQrHeader', url, 86);
+    renderQrCode('shareQrWaiting', url, 142);
+    ['shareLinkHeader', 'shareLinkWaiting'].forEach(id => {
+      const link = $(id);
+      if (link) link.href = url;
+    });
+  }
+
+  function getCodeFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = (params.get('code') || params.get('gameCode') || '').replace(/\D/g, '').slice(0, 6);
+      return code.length === 6 ? code : '';
+    } catch {
+      return '';
+    }
+  }
+
   function getSelectedQcatsFromUI() {
     return Array.from(document.querySelectorAll('.subcategory-checkbox:checked'))
       .map(el => el.value.trim())
@@ -292,6 +337,18 @@
       if ($('createUserId')) $('createUserId').value = lastNickname;
       if ($('joinUserId')) $('joinUserId').value = lastNickname;
     }
+
+    const codeFromUrl = getCodeFromUrl();
+    if (codeFromUrl && $('joinCode')) {
+      $('joinCode').value = codeFromUrl;
+      const hint = $('joinHint');
+      if (hint) {
+        hint.style.display = 'block';
+        hint.innerHTML = `已從 QR Code 帶入競賽代號：<strong>${escapeHtml(codeFromUrl)}</strong>。請輸入暱稱後按「加入競賽」。`;
+      }
+      setTimeout(() => $('joinUserId')?.focus(), 150);
+    }
+
     await loadCategoryBoard();
     $('createGameBtn')?.addEventListener('click', createGame);
     $('joinGameBtn')?.addEventListener('click', joinGame);
@@ -311,6 +368,7 @@
     }
 
     $('gameCode').textContent = gameCode;
+    setupShareQr(gameCode);
     $('currentUser').textContent = userId;
     $('currentQCat').textContent = qcat || '未指定';
 

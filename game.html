@@ -17,6 +17,14 @@
             <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
             <div class="small-muted">競賽代號</div>
             <div id="gameCode" class="game-code">------</div>
+            <div class="share-strip mt-3">
+              <div id="shareQrHeader" class="qr-mini"></div>
+              <div>
+                <div class="fw-bold">掃描加入此競賽</div>
+                <div class="small-muted">QR Code 已包含 6 位數代號，加入者只需填暱稱。</div>
+                <a id="shareLinkHeader" class="small" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+              </div>
+            </div>
             <div class="small-muted">
               使用者：<span id="currentUser"></span> ｜ 題目類別：<span id="currentQCat"></span>
             </div>
@@ -36,6 +44,14 @@
           <div class="section-title mb-3">等待開始</div>
           <div class="mb-2">目前競賽尚未開始。請先讓參與者使用上方代碼加入，再由主持者按下「開始第一題」。</div>
           <div id="waitingPlayerText" class="small-muted mb-3">目前加入人數：0 人</div>
+          <div class="qr-card mb-3">
+            <div id="shareQrWaiting" class="qr-box"></div>
+            <div>
+              <div class="fw-bold mb-1">邀請同學加入</div>
+              <div class="small-muted">請讓其他人掃描 QR Code。系統會自動帶入競賽代號，仍須輸入暱稱才能加入。</div>
+              <a id="shareLinkWaiting" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+            </div>
+          </div>
           <div id="waitingHostTools" style="display:none;">
             <button id="startBtn" class="btn btn-primary">開始第一題</button>
           </div>
@@ -83,6 +99,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
