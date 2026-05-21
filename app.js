@@ -467,7 +467,7 @@
         return;
       }
 
-      showPlayingState();
+      showPlayingState(state);
 
       if (forceReloadQuestion || !state.question || state.question.QID !== session.CurrentQID || previousQid !== session.CurrentQID) {
         await loadCurrentQuestion(state, session.CurrentQID);
@@ -487,20 +487,34 @@
     $('waitingPanel').style.display = 'block';
     $('playLayout').style.display = 'none';
     document.body.classList.remove('playing-compact-mode');
+
+    // v24: 輪詢每 1.5 秒會重畫狀態，但不應反覆覆蓋使用者手動展開／收合。
+    // 等待階段只在第一次進入時自動展開資訊；之後尊重使用者操作。
     const info = $('gameInfoDetails');
-    if (info) info.open = true;
+    if (info && !state.didAutoOpenWaitingInfo) {
+      info.open = true;
+      state.didAutoOpenWaitingInfo = true;
+    }
+
     updateTimer(QUESTION_SECONDS);
     if (state.isHost) {
       $('startBtn').disabled = false;
     }
   }
 
-  function showPlayingState() {
+  function showPlayingState(state) {
     $('waitingPanel').style.display = 'none';
     $('playLayout').style.display = 'flex';
+
+    const enteringCompactMode = !document.body.classList.contains('playing-compact-mode');
     document.body.classList.add('playing-compact-mode');
+
+    // v24: 開始出題時只自動收合一次；輪詢更新時不可把使用者剛展開的區塊又關掉。
     const info = $('gameInfoDetails');
-    if (info) info.open = false;
+    if (info && enteringCompactMode && !state.didAutoClosePlayingInfo) {
+      info.open = false;
+      state.didAutoClosePlayingInfo = true;
+    }
   }
 
   function setResultOnlyMode(enabled) {
@@ -520,9 +534,15 @@
     setResultOnlyMode(true);
     $('waitingPanel').style.display = 'none';
     $('playLayout').style.display = 'flex';
+
+    const enteringCompactMode = !document.body.classList.contains('playing-compact-mode');
     document.body.classList.add('playing-compact-mode');
     const info = $('gameInfoDetails');
-    if (info) info.open = false;
+    if (info && enteringCompactMode && !state.didAutoClosePlayingInfo) {
+      info.open = false;
+      state.didAutoClosePlayingInfo = true;
+    }
+
     updateTimer(0);
     $('actionMsg').textContent = '主持者已結束本場競賽。';
     $('nextBtn').disabled = true;
@@ -898,7 +918,7 @@
         StartedAt: (result.session && result.session.StartedAt) || new Date().toISOString()
       });
       $('questionNo').textContent = state.session.CurrentQuestionNo || 1;
-      showPlayingState();
+      showPlayingState(state);
       renderQuestionObject(state, firstQuestion);
       await handleQuestionAndResultPhase(state);
       setTimeout(() => refreshSession(state, true), 300);
@@ -935,7 +955,7 @@
         StartedAt: (result.session && result.session.StartedAt) || new Date().toISOString()
       });
       $('questionNo').textContent = state.session.CurrentQuestionNo || nextNo;
-      showPlayingState();
+      showPlayingState(state);
       renderQuestionObject(state, nextQuestion);
       await handleQuestionAndResultPhase(state);
       setTimeout(() => refreshSession(state, true), 300);
