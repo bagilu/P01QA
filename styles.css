@@ -461,3 +461,229 @@ h1::after, .game-main-title::after {
   .game-status-bar .stat-pill { flex:1 1 auto; text-align:center; }
   .game-status-bar .quiz-timer { margin-left:0; }
 }
+
+
+/* =========================================================
+   v25 三介面架構版：Home / Lobby / Quiz
+   目標：不再用展開收合管理流程，而是以真正畫面狀態切換。
+   ========================================================= */
+
+.screen-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.35rem;
+  padding:.34rem .85rem;
+  border-radius:999px;
+  color:#fff;
+  font-weight:900;
+  letter-spacing:.08em;
+  background:linear-gradient(135deg, var(--p01-pink), var(--p01-blue));
+  box-shadow:0 10px 24px rgba(39,103,216,.18);
+}
+
+.home-action-card {
+  min-height:100%;
+}
+.home-note {
+  text-align:center;
+  color:var(--p01-muted);
+  font-weight:700;
+  padding:1rem 1.25rem;
+  border-radius:20px;
+  background:rgba(255,255,255,.58);
+  border:1px dashed rgba(39,103,216,.24);
+}
+
+.mega-btn, .mega-start-btn {
+  min-height:56px;
+  font-size:1.08rem;
+}
+.mega-start-btn {
+  width:100%;
+  max-width:420px;
+  min-height:72px;
+  font-size:1.35rem;
+  box-shadow:0 16px 34px rgba(39,103,216,.24);
+  animation:startBreath 1.9s ease-in-out infinite;
+}
+@keyframes startBreath {
+  0%, 100% { transform:translateY(0) scale(1); }
+  50% { transform:translateY(-2px) scale(1.015); }
+}
+
+.lobby-card {
+  padding:34px;
+}
+.qr-box-large {
+  width:184px;
+  min-height:184px;
+  padding:14px;
+  background:#fff;
+  border-radius:24px;
+  box-shadow:0 16px 36px rgba(31,54,93,.13);
+}
+.lobby-code {
+  font-size:3.4rem;
+  line-height:1;
+  letter-spacing:.16em;
+  color:var(--p01-blue);
+  text-shadow:0 8px 20px rgba(39,103,216,.12);
+}
+.lobby-info-grid {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.65rem;
+}
+.lobby-pulse {
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+  padding:.85rem 1rem;
+  border-radius:999px;
+  background:rgba(24,165,103,.1);
+  color:#136b48;
+  font-weight:900;
+}
+.pulse-dot {
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  background:var(--p01-green);
+  box-shadow:0 0 0 rgba(24,165,103,.55);
+  animation:pulseJoin 1.25s infinite;
+}
+@keyframes pulseJoin {
+  0% { box-shadow:0 0 0 0 rgba(24,165,103,.55); }
+  70% { box-shadow:0 0 0 13px rgba(24,165,103,0); }
+  100% { box-shadow:0 0 0 0 rgba(24,165,103,0); }
+}
+
+.quiz-topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  padding:1rem 1.25rem;
+  border-radius:26px;
+  background:rgba(255,255,255,.88);
+  border:1px solid var(--p01-line);
+  box-shadow:0 12px 28px rgba(40,70,120,.07);
+}
+.quiz-meta {
+  color:var(--p01-ink);
+  font-weight:900;
+  font-size:1.05rem;
+}
+.quiz-timer-wrap {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.timer-track {
+  height:16px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(23,32,51,.1);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.08);
+}
+.timer-bar {
+  width:100%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, var(--p01-green), var(--p01-cyan), var(--p01-blue));
+  transition:width .35s linear;
+}
+.timer-bar.timer-low {
+  background:linear-gradient(90deg, var(--p01-orange), var(--p01-pink));
+}
+
+.quiz-question-card {
+  min-height:168px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.answer-grid {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:1rem;
+}
+.answer-option {
+  width:100%;
+  min-height:68px;
+  text-align:left;
+  border:0;
+  border-radius:22px;
+  padding:1rem 1.15rem;
+  color:#fff;
+  font-size:1.08rem;
+  font-weight:900;
+  box-shadow:0 12px 28px rgba(31,54,93,.14);
+  transition:transform .15s ease, opacity .15s ease, filter .15s ease;
+}
+.answer-option:nth-child(1) { background:linear-gradient(135deg, #2767d8, #1fa2ff); }
+.answer-option:nth-child(2) { background:linear-gradient(135deg, #18a567, #2ed39b); }
+.answer-option:nth-child(3) { background:linear-gradient(135deg, #ff8a1d, #ffba4a); }
+.answer-option:nth-child(4) { background:linear-gradient(135deg, #e9568f, #8f58ff); }
+.answer-option:hover:not(:disabled) {
+  transform:translateY(-2px) scale(1.01);
+}
+.answer-option.selected {
+  outline:5px solid rgba(255,255,255,.96);
+  box-shadow:0 0 0 5px rgba(23,32,51,.12), 0 18px 36px rgba(31,54,93,.2);
+}
+.answer-option.answer-locked:not(.selected) {
+  opacity:.48;
+  filter:saturate(.75);
+}
+.answer-status {
+  min-height:1.8rem;
+  font-weight:900;
+  color:var(--p01-blue);
+}
+
+.scan-join-mode #createPanelCol {
+  display:none !important;
+}
+.scan-join-mode #joinPanelCol {
+  max-width:760px;
+}
+.form-check-input {
+  width:1.25em;
+  height:1.25em;
+  border:2.5px solid #1f5ec7 !important;
+  box-shadow:0 0 0 3px rgba(39,103,216,.08);
+}
+.form-check-input:checked {
+  background-color:var(--p01-blue);
+  border-color:var(--p01-blue) !important;
+}
+.category-check {
+  border:1px solid rgba(39,103,216,.22);
+  border-radius:14px;
+  padding:.55rem .75rem .55rem 2.1rem;
+  background:#fff;
+}
+
+@media (min-width: 768px) {
+  .answer-grid {
+    grid-template-columns:1fr 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .lobby-code {
+    font-size:2.3rem;
+  }
+  .quiz-topbar {
+    align-items:flex-start;
+  }
+  .quiz-timer {
+    min-width:64px;
+    min-height:64px;
+    font-size:1.6rem;
+  }
+  .answer-option {
+    min-height:62px;
+  }
+}

@@ -346,8 +346,11 @@
       if (createDetails) createDetails.open = false;
       const createCol = $('createPanelCol');
       const joinCol = $('joinPanelCol');
-      if (createCol) createCol.className = 'col-lg-4 order-lg-2';
-      if (joinCol) joinCol.className = 'col-lg-8 order-lg-1';
+      if (createCol) {
+        createCol.style.display = 'none';
+        createCol.className = 'col-lg-4 order-lg-2';
+      }
+      if (joinCol) joinCol.className = 'col-lg-7 mx-auto order-lg-1';
       const codeGroup = $('joinCodeGroup');
       if (codeGroup) codeGroup.style.display = 'none';
       const scanBox = $('scanJoinBox');
@@ -385,11 +388,11 @@
     $('currentQCat').textContent = qcat || '未指定';
 
     if (isHost) {
-      $('hostTools').style.display = 'block';
-      $('nonHostTools').style.display = 'none';
+      if ($('hostTools')) $('hostTools').style.display = 'block';
+      if ($('nonHostTools')) $('nonHostTools').style.display = 'none';
       if ($('endBtn')) $('endBtn').style.display = 'inline-block';
-      $('waitingHostTools').style.display = 'block';
-      $('waitingNonHostText').style.display = 'none';
+      if ($('waitingHostTools')) $('waitingHostTools').style.display = 'block';
+      if ($('waitingNonHostText')) $('waitingNonHostText').style.display = 'none';
     }
 
     const state = {
@@ -484,37 +487,23 @@
   function showWaitingState(state) {
     state.phase = 'waiting';
     setResultOnlyMode(false);
-    $('waitingPanel').style.display = 'block';
-    $('playLayout').style.display = 'none';
+    if ($('lobbyScreen')) $('lobbyScreen').style.display = 'block';
+    if ($('quizScreen')) $('quizScreen').style.display = 'none';
+    if ($('waitingPanel')) $('waitingPanel').style.display = 'block';
+    if ($('playLayout')) $('playLayout').style.display = 'none';
     document.body.classList.remove('playing-compact-mode');
-
-    // v24: 輪詢每 1.5 秒會重畫狀態，但不應反覆覆蓋使用者手動展開／收合。
-    // 等待階段只在第一次進入時自動展開資訊；之後尊重使用者操作。
-    const info = $('gameInfoDetails');
-    if (info && !state.didAutoOpenWaitingInfo) {
-      info.open = true;
-      state.didAutoOpenWaitingInfo = true;
-    }
-
     updateTimer(QUESTION_SECONDS);
-    if (state.isHost) {
+    if (state.isHost && $('startBtn')) {
       $('startBtn').disabled = false;
     }
   }
 
   function showPlayingState(state) {
-    $('waitingPanel').style.display = 'none';
-    $('playLayout').style.display = 'flex';
-
-    const enteringCompactMode = !document.body.classList.contains('playing-compact-mode');
+    if ($('lobbyScreen')) $('lobbyScreen').style.display = 'none';
+    if ($('quizScreen')) $('quizScreen').style.display = 'block';
+    if ($('waitingPanel')) $('waitingPanel').style.display = 'none';
+    if ($('playLayout')) $('playLayout').style.display = 'flex';
     document.body.classList.add('playing-compact-mode');
-
-    // v24: 開始出題時只自動收合一次；輪詢更新時不可把使用者剛展開的區塊又關掉。
-    const info = $('gameInfoDetails');
-    if (info && enteringCompactMode && !state.didAutoClosePlayingInfo) {
-      info.open = false;
-      state.didAutoClosePlayingInfo = true;
-    }
   }
 
   function setResultOnlyMode(enabled) {
@@ -532,20 +521,15 @@
   function showEndedState(state) {
     state.phase = 'ended';
     setResultOnlyMode(true);
-    $('waitingPanel').style.display = 'none';
-    $('playLayout').style.display = 'flex';
-
-    const enteringCompactMode = !document.body.classList.contains('playing-compact-mode');
+    if ($('lobbyScreen')) $('lobbyScreen').style.display = 'none';
+    if ($('quizScreen')) $('quizScreen').style.display = 'block';
+    if ($('waitingPanel')) $('waitingPanel').style.display = 'none';
+    if ($('playLayout')) $('playLayout').style.display = 'flex';
     document.body.classList.add('playing-compact-mode');
-    const info = $('gameInfoDetails');
-    if (info && enteringCompactMode && !state.didAutoClosePlayingInfo) {
-      info.open = false;
-      state.didAutoClosePlayingInfo = true;
-    }
 
     updateTimer(0);
-    $('actionMsg').textContent = '主持者已結束本場競賽。';
-    $('nextBtn').disabled = true;
+    if ($('actionMsg')) $('actionMsg').textContent = '主持者已結束本場競賽。';
+    if ($('nextBtn')) $('nextBtn').disabled = true;
     setAnswerOptionsDisabled(true);
   }
 
@@ -630,13 +614,20 @@
   }
 
   function updateTimer(seconds) {
-    $('timer').textContent = seconds;
+    if ($('timer')) $('timer').textContent = seconds;
+    const bar = $('timerBar');
+    if (bar) {
+      const pct = Math.max(0, Math.min(100, (Number(seconds) / QUESTION_SECONDS) * 100));
+      bar.style.width = pct + '%';
+      bar.classList.toggle('timer-low', pct <= 30);
+    }
   }
 
   function setAnswerOptionsDisabled(disabled) {
     document.querySelectorAll('.answer-option').forEach(el => {
       el.disabled = !!disabled;
       el.classList.toggle('disabled', !!disabled);
+      el.classList.toggle('answer-locked', !!disabled);
     });
   }
 

@@ -7,98 +7,107 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="styles.css" rel="stylesheet">
 </head>
-<body>
+<body class="game-page">
   <div class="container py-4" style="max-width: 1200px;">
     <div class="card app-card">
       <div class="card-body p-4">
-        <div class="game-top-shell mb-4" id="gameTopShell">
-          <details id="gameInfoDetails" class="game-info-details" open>
-            <summary>展開／收合：競賽代號、QR Code、題目類別與回首頁</summary>
-            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mt-3">
-              <div>
-                <h1 class="mb-1 game-main-title">P01我的卡呼</h1>
-                <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
+
+        <section id="lobbyScreen" class="screen-section lobby-screen">
+          <div class="text-center mb-4">
+            <div class="screen-badge mb-3">Lobby｜等待室</div>
+            <h1 class="mb-2">P01我的卡呼</h1>
+            <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
+            <div class="soft-label">請讓參與者掃描 QR Code 加入。主持人確認人數後，按下開始第一題。</div>
+          </div>
+
+          <div id="waitingPanel" class="question-box waiting-panel lobby-card mb-4">
+            <div class="row g-4 align-items-center">
+              <div class="col-lg-5 text-center">
+                <div id="shareQrWaiting" class="qr-box qr-box-large mx-auto"></div>
+                <a id="shareLinkWaiting" href="#" target="_blank" rel="noopener" class="small d-inline-block mt-2">開啟加入連結</a>
+              </div>
+              <div class="col-lg-7">
                 <div class="small-muted">競賽代號</div>
-                <div id="gameCode" class="game-code">------</div>
-                <div class="share-strip mt-3">
-                  <div id="shareQrHeader" class="qr-mini"></div>
-                  <div>
-                    <div class="fw-bold">掃描加入此競賽</div>
-                    <div class="small-muted">QR Code 已包含 6 位數代號，加入者只需填暱稱。</div>
-                    <a id="shareLinkHeader" class="small" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+                <div id="gameCode" class="game-code lobby-code">------</div>
+                <div class="lobby-pulse mt-3 mb-3">
+                  <span class="pulse-dot"></span>
+                  <span id="waitingPlayerText">目前加入人數：0 人</span>
+                </div>
+                <div class="lobby-info-grid mb-3">
+                  <div class="stat-pill">使用者：<span id="currentUser"></span></div>
+                  <div class="stat-pill">題目類別：<span id="currentQCat"></span></div>
+                </div>
+                <div id="waitingHostTools" style="display:none;">
+                  <button id="startBtn" class="btn btn-primary btn-lg mega-start-btn">開始第一題</button>
+                </div>
+                <div id="waitingNonHostText" class="small-muted">您已加入競賽，請等待主持者開始第一題。</div>
+                <div class="mt-3">
+                  <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
+                  <button id="endBtn" type="button" class="btn btn-outline-danger btn-sm" style="display:none;">結束競賽</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="quizScreen" class="screen-section quiz-screen" style="display:none;">
+          <div class="quiz-topbar mb-3">
+            <div>
+              <div class="screen-badge mb-1">Quiz｜答題中</div>
+              <div class="quiz-meta">題號 <span id="questionNo">0</span> ｜ 加入 <span id="playerCount">0</span> 人</div>
+            </div>
+            <div class="quiz-timer-wrap">
+              <div class="quiz-timer" id="timer">30</div>
+            </div>
+          </div>
+          <div class="timer-track mb-4"><div id="timerBar" class="timer-bar"></div></div>
+
+          <div id="playLayout" class="row g-4">
+            <div id="questionColumn" class="col-lg-8">
+              <div class="question-box quiz-question-card mb-4">
+                <div class="section-title mb-2">題目</div>
+                <div id="questionText" class="fs-4 fw-bold">載入中...</div>
+              </div>
+
+              <div class="question-box mb-4">
+                <div class="section-title mb-3">請直接點選答案</div>
+                <div id="answerArea" class="answer-grid"></div>
+                <div id="actionMsg" class="answer-status mt-3"></div>
+                <div class="small-muted mt-2">作答後會鎖定答案。若全體成員都已作答，系統會立即進入排行榜畫面。</div>
+              </div>
+            </div>
+
+            <div id="rankColumn" class="col-lg-4">
+              <div class="question-box mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                  <div class="section-title mb-0">排行榜</div>
+                  <div id="hostTools" style="display:none;">
+                    <button id="nextBtn" class="btn btn-primary btn-sm" disabled>下一題</button>
                   </div>
                 </div>
-                <div class="small-muted">
-                  使用者：<span id="currentUser"></span> ｜ 題目類別：<span id="currentQCat"></span>
-                </div>
+                <div id="nonHostTools" class="small-muted mb-3">請等待主持者切換下一題。</div>
+                <div id="resultStatus" class="small-muted mb-3"></div>
+                <div id="rankArea">尚無資料。</div>
               </div>
-              <div class="header-actions d-flex gap-2">
-                <a href="index.html" class="btn btn-outline-secondary btn-sm">回首頁</a>
-                <button id="endBtn" type="button" class="btn btn-outline-danger btn-sm" style="display:none;">結束競賽</button>
+
+              <div class="question-box" id="resultPanel">
+                <div class="section-title mb-3">本題統計</div>
+                <div id="distributionArea" class="mb-3">尚未結算。</div>
+                <div id="correctArea" class="fw-bold"></div>
               </div>
             </div>
-          </details>
-          <div class="game-status-bar mt-3">
-            <div class="stat-pill">目前加入人數：<span id="playerCount">0</span> 人</div>
-            <div class="stat-pill">目前題號：<span id="questionNo">0</span></div>
-            <div class="quiz-timer" id="timer">30</div>
           </div>
-        </div>
 
-        <div id="waitingPanel" class="question-box waiting-panel mb-4">
-          <div class="section-title mb-3">等待開始</div>
-          <div class="mb-2">目前競賽尚未開始。請先讓參與者使用上方代碼加入，再由主持者按下「開始第一題」。</div>
-          <div id="waitingPlayerText" class="small-muted mb-3">目前加入人數：0 人</div>
-          <div class="qr-card mb-3">
-            <div id="shareQrWaiting" class="qr-box"></div>
+          <div class="share-strip visually-available mt-4">
+            <div id="shareQrHeader" class="qr-mini"></div>
             <div>
-              <div class="fw-bold mb-1">邀請同學加入</div>
-              <div class="small-muted">請讓其他人掃描 QR Code。系統會自動帶入競賽代號，仍須輸入暱稱才能加入。</div>
-              <a id="shareLinkWaiting" href="#" target="_blank" rel="noopener">開啟加入連結</a>
+              <div class="fw-bold">邀請其他人加入</div>
+              <div class="small-muted">此 QR Code 與等待室相同，已包含 6 位數代號。</div>
+              <a id="shareLinkHeader" class="small" href="#" target="_blank" rel="noopener">開啟加入連結</a>
             </div>
           </div>
-          <div id="waitingHostTools" style="display:none;">
-            <button id="startBtn" class="btn btn-primary">開始第一題</button>
-          </div>
-          <div id="waitingNonHostText" class="small-muted">若您不是主持者，請等待主持者開始第一題。</div>
-        </div>
+        </section>
 
-        <div id="playLayout" class="row g-4" style="display:none;">
-          <div id="questionColumn" class="col-lg-8">
-            <div class="question-box mb-4">
-              <div class="section-title mb-2">題目</div>
-              <div id="questionText" class="fs-5">載入中...</div>
-            </div>
-
-            <div class="question-box mb-4">
-              <div class="section-title mb-3">請直接點選答案</div>
-              <div id="answerArea"></div>
-              <div id="actionMsg" class="text-danger mt-3"></div>
-              <div class="small-muted mt-2">每題預設倒數 30 秒。答對者以剩餘秒數計分；答錯或逾時為 0 分。若全體成員都已作答，系統會立即結束本題並切換為排行榜畫面；否則 30 秒到時結算。本題結束後，不會自動跳下一題，需由主持者按「下一題」。</div>
-            </div>
-
-          </div>
-
-          <div id="rankColumn" class="col-lg-4">
-            <div class="question-box mb-4">
-              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-                <div class="section-title mb-0">排行榜（三種排名）</div>
-                <div id="hostTools" style="display:none;">
-                  <button id="nextBtn" class="btn btn-primary btn-sm" disabled>下一題</button>
-                </div>
-              </div>
-              <div id="nonHostTools" class="small-muted mb-3">若您不是主持者，系統會自動跟隨目前競賽進度，並等待主持者切換下一題。</div>
-              <div id="resultStatus" class="small-muted mb-3"></div>
-              <div id="rankArea">尚無資料。</div>
-            </div>
-
-            <div class="question-box" id="resultPanel">
-              <div class="section-title mb-3">本題統計</div>
-              <div id="distributionArea" class="mb-3">尚未結算。</div>
-              <div id="correctArea" class="fw-bold"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
