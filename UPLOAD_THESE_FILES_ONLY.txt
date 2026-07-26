@@ -1,0 +1,13 @@
+P01 我的卡呼 V26.1：GitHub-only 部署
+
+請把本資料夾內的以下項目上傳至目前 GitHub Pages repository 的網站根目錄，覆蓋同名檔案：
+- index.html
+- game.html
+- css/styles.css
+- js/app.js
+
+重要：
+1. 不要刪除 GitHub 上既有且可正常連線的 config.js。
+2. 本資料夾刻意不附 config.js，以免覆蓋正確的 Supabase URL 與 anon key。
+3. Database、EdgeFunctions、docs 僅供保存，本次不用部署或執行。
+4. 上傳後等待 GitHub Pages 完成部署，再以 Ctrl+F5 強制重新整理。
