@@ -1,38 +1,29 @@
-# P01 我的卡呼 V26.1（GitHub-only Deploy Baseline）
+# P01 我的卡呼 V26.3
 
-本版以已恢復運作的 P01 v25/v26 為基準，完成 P-SDS 檔案整理，並明確區分：
+基準：V26.2 Image Questions。
 
-- `GitHub_Deploy_Only/`：本次實際上傳 GitHub Pages 的前端檔案。
-- `Database/`：完整 SQL 部署與診斷腳本，僅保存，本次不要執行。
-- `EdgeFunctions/`：既有六支 Supabase Edge Functions，僅保存，本次不要重新部署。
-- `docs/`：故障排除與舊版本紀錄。
+本版新增兩項功能：
 
-## 本次已確認的故障根因
+1. 建立競賽時可設定題目數（1–100，預設 10）。
+2. 勾選多個類別時採「類別輪抽」：第一輪各類別隨機出一題，輪完後進第二輪，再各類別隨機出一題，直到達到設定題數。已無未出題目的類別會略過。
+3. 修正答案選項在畫面出現後又重新洗牌的問題。同一玩家＋同一競賽＋同一題使用固定的隨機順序，即使輪詢重新 render 也不會換位。
+4. 延續 V26.2 圖片題：Q 欄位可使用 `<img src="images/questions/Q0001.jpg">`。
 
-首頁「載入失敗」是因為 `anon` 缺少 `public."TblP01Question"` 的 `SELECT` 權限。現有 Supabase 已經人工修復；對應授權已納入：
+## 本次部署
 
-`Database/07_GrantPermissions.sql`
+只更新 GitHub Pages 即可，不需要執行 Database SQL，也不需要重新部署 Edge Functions。
 
-## 本次部署方式
+請從 `GitHub_Deploy_Only/` 更新：
 
-只上傳 `GitHub_Deploy_Only/` 裡面的內容，覆蓋網站 repository 根目錄的同名檔案。
+- `index.html`
+- `game.html`
+- `js/app.js`
+- `css/styles.css`
 
-務必保留 GitHub 上目前可正常使用的 `config.js`。本 ZIP 不提供真正的 `config.js`，避免誤覆蓋 Supabase URL 與 anon key。
+`config.js` 請保留目前線上可用版本，不要覆蓋。
 
-## 不需執行的項目
+`images/questions/` 是 persistent assets directory。更新程式時，不得刪除既有的 Qxxxx.jpg。
 
-本次不要執行 SQL，不要重新部署 Edge Functions，也不要重建資料表。這些檔案只是建立最新、可追溯的專案基準。
+## 題數機制說明
 
-## 驗證
-
-部署完成後：
-
-1. 開啟首頁並以 `Ctrl+F5` 強制重新整理。
-2. 題目類別應正常載入。
-3. 測試建立競賽、加入等待室、開始題目、提交答案與排行榜。
-4. 若出現錯誤，查看瀏覽器開發者工具 Console 的第一個紅色訊息。
-
-## V26.2 Image Question Support
-V26.2 adds safe image rendering inside the existing question field without changing the database schema.
-Example: `請問紅色的國家是？<br><img src="images/questions/Q0001.jpg" alt="題目圖片">`.
-Question images are persistent GitHub assets under `images/questions/`.
+題數目前由主持人的瀏覽器 localStorage 保存，不修改既有 Supabase schema。主持人進入競賽後，依設定題數控制是否繼續抽題。最後一題結算後，「下一題」按鈕會改成「結束競賽」。

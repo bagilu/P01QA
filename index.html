@@ -36,6 +36,12 @@
                 </div>
               </div>
 
+              <div class="mb-4">
+                <label class="form-label" for="questionCount">題目數</label>
+                <input type="number" id="questionCount" class="form-control" min="1" max="100" value="10" inputmode="numeric">
+                <div class="small-muted mt-1">系統會依勾選類別輪流抽題：每類隨機一題，輪完後再進入下一輪，直到達到設定題數。</div>
+              </div>
+
               <button id="createGameBtn" class="btn btn-primary btn-lg w-100 mega-btn">建立競賽</button>
               <div id="createMsg" class="text-danger mt-3"></div>
             </div>

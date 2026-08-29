@@ -29,7 +29,8 @@
     selectedQcats: 'P01_SELECTED_QCATS',
     host: 'P01_IS_HOST',
     seenQidsPrefix: 'P01_SEEN_QIDS_',
-    lastNickname: 'P01_LAST_NICKNAME'
+    lastNickname: 'P01_LAST_NICKNAME',
+    questionCount: 'P01_QUESTION_COUNT'
   };
 
   const QUESTION_SECONDS = 30;
@@ -117,6 +118,32 @@
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  // V26.3: 同一玩家在同一題的答案順序必須穩定。
+  // 以 game + user + qid 產生固定種子，避免輪詢或重新 render 時答案突然換位。
+  function hashSeed(text) {
+    let h = 2166136261 >>> 0;
+    const str = String(text ?? '');
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function seededShuffle(array, seedText) {
+    const arr = [...array];
+    let seed = hashSeed(seedText) || 1;
+    function nextRandom() {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    }
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(nextRandom() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
     return arr;
@@ -302,12 +329,46 @@
     return data[randomIndex];
   }
 
+  async function getRandomQuestionBySingleQCat(qcat, excludedQids = []) {
+    let query = supabaseClient
+      .from('TblP01Question')
+      .select('QID, Q, CA, WA1, WA2, WA3, QCat')
+      .eq('QCat', qcat);
+
+    if (excludedQids.length > 0) {
+      query = query.not('QID', 'in', `(${excludedQids.join(',')})`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+    return data[Math.floor(Math.random() * data.length)];
+  }
+
+  // V26.3: 類別輪抽。每輪每個勾選類別各出一題，再進下一輪。
+  // 若某類別已無未出題目，會跳過該類別並嘗試下一個。
+  async function getNextRoundRobinQuestion(state, questionIndexZeroBased) {
+    const qcats = Array.isArray(state.selectedQcats) ? state.selectedQcats.filter(Boolean) : [];
+    if (qcats.length === 0) throw new Error('尚未選擇題目小類別。');
+
+    const excludedQids = getSeenQids(state.gameId);
+    const startIndex = Math.max(0, Number(questionIndexZeroBased) || 0) % qcats.length;
+
+    for (let offset = 0; offset < qcats.length; offset++) {
+      const qcat = qcats[(startIndex + offset) % qcats.length];
+      const question = await getRandomQuestionBySingleQCat(qcat, excludedQids);
+      if (question) return question;
+    }
+    throw new Error('勾選的類別中已經沒有可出的新題目了。');
+  }
+
   async function createGame() {
     const createMsg = $('createMsg');
     createMsg.textContent = '';
 
     const userId = $('createUserId').value.trim();
     const selectedQcats = getSelectedQcatsFromUI();
+    const questionCount = Math.max(1, Math.min(100, parseInt($('questionCount')?.value || '10', 10) || 10));
 
     if (!userId) {
       createMsg.textContent = '請先輸入暱稱。';
@@ -333,6 +394,7 @@
       localStorage.setItem(STORAGE_KEYS.qcat, qcatText);
       localStorage.setItem(STORAGE_KEYS.selectedQcats, JSON.stringify(selectedQcats));
       localStorage.setItem(STORAGE_KEYS.host, 'true');
+      localStorage.setItem(STORAGE_KEYS.questionCount, String(questionCount));
       localStorage.setItem(getSeenKey(session.GameID), JSON.stringify([]));
 
       window.location.href = 'game.html';
@@ -426,6 +488,7 @@
     const qcat = localStorage.getItem(STORAGE_KEYS.qcat);
     const isHost = localStorage.getItem(STORAGE_KEYS.host) === 'true';
     const selectedQcats = parseSelectedQcats(localStorage.getItem(STORAGE_KEYS.selectedQcats));
+    const questionCount = Math.max(1, Math.min(100, parseInt(localStorage.getItem(STORAGE_KEYS.questionCount) || '10', 10) || 10));
 
     if (!gameId || !gameCode || !userId) {
       window.location.href = 'index.html';
@@ -451,6 +514,7 @@
       userId,
       qcat,
       selectedQcats,
+      questionCount,
       isHost,
       session: null,
       question: null,
@@ -635,13 +699,14 @@
     $('correctArea').textContent = '';
     $('distributionArea').innerHTML = '尚未結算。';
     $('nextBtn').disabled = true;
+    $('nextBtn').textContent = '下一題';
 
-    state.answers = shuffle([
+    state.answers = seededShuffle([
       state.question.CA,
       state.question.WA1,
       state.question.WA2,
       state.question.WA3
-    ]);
+    ], `${state.gameId}|${state.userId}|${state.question.QID}`);
 
     const answerArea = $('answerArea');
     answerArea.innerHTML = '';
@@ -790,7 +855,9 @@
     setAnswerOptionsDisabled(true);
     setResultOnlyMode(true);
 
+    const reachedTarget = state.isHost && Number(state.session?.CurrentQuestionNo || 0) >= state.questionCount;
     if (state.isHost) {
+      $('nextBtn').textContent = reachedTarget ? '結束競賽' : '下一題';
       $('nextBtn').disabled = false;
     }
 
@@ -798,7 +865,9 @@
     await renderRanking(state);
 
     const statusText = state.isHost
-      ? (allAnswered ? '全體已作答完成，主持者現在可以按「下一題」。' : '本題時間結束，主持者現在可以按「下一題」。')
+      ? (reachedTarget
+          ? `已完成設定的 ${state.questionCount} 題，請按「結束競賽」。`
+          : (allAnswered ? '全體已作答完成，主持者現在可以按「下一題」。' : '本題時間結束，主持者現在可以按「下一題」。'))
       : (allAnswered ? '全體已作答完成，請等待主持者切換下一題。' : '本題時間結束，請等待主持者切換下一題。');
     if ($('resultStatus')) $('resultStatus').textContent = statusText;
     if ($('actionMsg')) $('actionMsg').textContent = statusText;
@@ -940,7 +1009,7 @@
     if (!state.isHost) return;
     $('startBtn').disabled = true;
     try {
-      const firstQuestion = await getRandomQuestionByQCats(state.selectedQcats, getSeenQids(state.gameId));
+      const firstQuestion = await getNextRoundRobinQuestion(state, 0);
       addSeenQid(state.gameId, firstQuestion.QID);
 
       const result = await callFunction('P01_set_question', {
@@ -972,16 +1041,28 @@
 
   async function manualNextQuestion(state) {
     $('nextBtn').disabled = true;
+    const currentNo = Number(state.session?.CurrentQuestionNo || 0);
+    if (state.isHost && currentNo >= state.questionCount) {
+      await endGame(state, true);
+      return;
+    }
     await autoAdvanceQuestion(state);
   }
 
   async function autoAdvanceQuestion(state) {
     try {
-      const excludedQids = getSeenQids(state.gameId);
-      const nextQuestion = await getRandomQuestionByQCats(state.selectedQcats, excludedQids);
+      const currentNo = Number(state.session?.CurrentQuestionNo || 0);
+      if (state.isHost && currentNo >= state.questionCount) {
+        $('actionMsg').textContent = `已完成設定的 ${state.questionCount} 題。`;
+        $('nextBtn').textContent = '結束競賽';
+        $('nextBtn').disabled = false;
+        return;
+      }
+
+      const nextQuestion = await getNextRoundRobinQuestion(state, currentNo);
       addSeenQid(state.gameId, nextQuestion.QID);
 
-      const nextNo = (state.session.CurrentQuestionNo || 0) + 1;
+      const nextNo = currentNo + 1;
       const result = await callFunction('P01_set_question', {
         game_id: state.gameId,
         user_id: state.userId,
@@ -1006,8 +1087,8 @@
     }
   }
 
-  async function endGame(state) {
-    if (!confirm('確定要結束這場競賽嗎？')) return;
+  async function endGame(state, skipConfirm = false) {
+    if (!skipConfirm && !confirm('確定要結束這場競賽嗎？')) return;
 
     try {
       await callFunction('P01_end_game', {
