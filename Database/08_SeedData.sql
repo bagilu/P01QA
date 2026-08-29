@@ -1,0 +1,3 @@
+-- 選用測試題。正式題庫已有資料時不必執行。
+-- insert into public."TblP01Question" ("Q", "CA", "WA1", "WA2", "WA3", "QCatMain", "QCat")
+-- values ('1 + 1 = ?', '2', '1', '3', '4', '測試', '基本測試');

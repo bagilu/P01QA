@@ -1,0 +1,17 @@
+P01 MyKahoot V26.2 - GitHub-only deployment
+
+Upload/overwrite:
+- index.html
+- game.html
+- js/app.js
+- css/styles.css
+
+Also create/keep:
+- images/questions/
+
+Put quiz images there using neutral names such as Q0001.jpg, Q0002.jpg, etc.
+IMPORTANT: Never delete existing JPG files in images/questions/ during future upgrades.
+
+Do NOT overwrite your existing working config.js.
+No SQL execution is required.
+No Edge Function deployment is required.

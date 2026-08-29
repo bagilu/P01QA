@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P01我的卡呼</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+</head>
+<body class="home-page">
+  <div class="container py-5" style="max-width: 1180px;">
+    <div class="card app-card">
+      <div class="card-body p-4 p-md-5">
+        <div class="text-center mb-4 hero-block">
+          <div class="screen-badge mb-3">Home｜首頁</div>
+          <h1 class="mb-2">P01我的卡呼</h1>
+          <div class="sub-title mb-2">慈濟大學<span class="dept-highlight">經營管理學系</span>學生專題</div>
+          <div class="soft-label">可以一個人競賽，也可以藉由 6 位數競賽代號，讓其他人加入同一場競賽。</div>
+        </div>
+
+        <div class="row g-4 align-items-stretch" id="homeLayout">
+          <div class="col-lg-7" id="createPanelCol">
+            <div class="mode-card h-100 home-action-card">
+              <div class="mode-title mb-2">開啟新競賽</div>
+              <div class="soft-label mb-3">請先輸入暱稱，並勾選要出題的小類別。建立後會進入等待室，讓參與者掃描 QR Code 加入。</div>
+
+              <div class="mb-4">
+                <label class="form-label required-label">暱稱 <span class="required-star">*</span> <span class="required-text">必填</span></label>
+                <input type="text" id="createUserId" class="form-control" placeholder="例如：Jimmy" required>
+              </div>
+
+              <div class="mb-3">
+                <div class="form-label mb-2">題目類別（可複選第二層類別）</div>
+                <div id="categoryBoard" class="category-board">
+                  <div class="small-muted">載入中...</div>
+                </div>
+              </div>
+
+              <button id="createGameBtn" class="btn btn-primary btn-lg w-100 mega-btn">建立競賽</button>
+              <div id="createMsg" class="text-danger mt-3"></div>
+            </div>
+          </div>
+
+          <div class="col-lg-5" id="joinPanelCol">
+            <div class="mode-card h-100 home-action-card join-card">
+              <div class="mode-title mb-2">加入競賽</div>
+              <div class="soft-label mb-3" id="joinIntroText">若朋友已建立競賽，請輸入暱稱與 6 位數競賽代號加入。同一場競賽中的所有人會看到同一題。</div>
+              <div id="scanJoinBox" class="scan-join-box mb-3" style="display:none;">
+                <div class="qr-card justify-content-center">
+                  <div id="scanJoinQr" class="qr-box"></div>
+                  <div>
+                    <div class="fw-bold">掃描加入競賽</div>
+                    <div class="small-muted">QR Code 已包含競賽代號；請輸入暱稱後加入。</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label required-label">暱稱 <span class="required-star">*</span> <span class="required-text">必填</span></label>
+                <input type="text" id="joinUserId" class="form-control" placeholder="例如：Amy" required>
+              </div>
+
+              <div class="mb-3" id="joinCodeGroup">
+                <label class="form-label">競賽代號</label>
+                <input type="text" id="joinCode" class="form-control" maxlength="6" placeholder="請輸入 6 位數字">
+              </div>
+
+              <button id="joinGameBtn" class="btn btn-success btn-lg w-100 mega-btn">加入競賽</button>
+              <div id="joinHint" class="join-hint mt-3" style="display:none;"></div>
+              <div id="joinMsg" class="text-danger mt-3"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-note mt-4">
+          三介面架構：首頁 → 等待室 → 答題畫面。開始競賽後，畫面會專注於題目與作答，不再使用展開／收合。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

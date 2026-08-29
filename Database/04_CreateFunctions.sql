@@ -1,0 +1,2 @@
+-- 本專案的伺服器寫入邏輯位於 EdgeFunctions/。
+-- 目前不建立 PostgreSQL RPC；保留本檔以符合 P-SDS。
